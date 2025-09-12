@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chapter 2: The Human Body in Health and Disease</title>
+    <title>Medical Terminology Challenge</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -115,7 +115,7 @@
         }
 
         .btn-tf.selected {
-            background-color: var(--accent-color-dark); /* Darker color for selection */
+            background-color: var(--accent-color-dark);
             color: white; 
             border-color: var(--accent-color-dark);
             transform: translateY(-2px);
@@ -229,7 +229,7 @@
 <body>
     <div class="game-container">
         <div id="menuScreen" class="screen active">
-            <div class="header"><h1>Chapter 2: </h1> <h1>The Human Body in Health and Disease</h1><p>Select a level to begin your learning session.</p></div>
+            <div class="header"><h1>Medical Terminology Challenge</h1><p>Select a level to begin your learning session.</p></div>
             <div class="level-selection">
                 <div class="level-card" onclick="startQuiz('Beginner')"><h3>Beginner</h3><p>Master the fundamental building blocks: prefixes, suffixes, and word roots.</p></div>
                 <div class="level-card" onclick="startQuiz('Intermediate')"><h3>Intermediate</h3><p>Define and analyze complete medical terms used in clinical practice.</p></div>
@@ -485,17 +485,31 @@
 
         updateStats();
         submitBtn.disabled = true;
-        readAloudBtn.onclick = () => { 
+        readAloudBtn.onclick = () => {
+            speechSynthesis.cancel(); 
             let textToSpeak = q.questionText;
-            if (q.options) {
-                textToSpeak += ". The options are: " + q.options.join(', ');
-            } else if (q.type === 'true-false') {
-                textToSpeak += ". The options are: True, or False.";
-            } else if (q.type === 'matching') {
-                textToSpeak += ". The items to match are: " + q.terms.join(', ');
+            switch (q.type) {
+                case 'multiple-choice':
+                case 'case-study':
+                case 'outlier':
+                case 'term-construction':
+                    textToSpeak += ". The options are: " + q.options.join(', ');
+                    break;
+                case 'true-false':
+                    textToSpeak += ". Is this statement True, or False?";
+                    break;
+                case 'matching':
+                    textToSpeak += ". The items to match are: " + q.terms.join(', ');
+                    break;
+                case 'fill-in-the-blank':
+                    textToSpeak = q.questionText.replace('_________', 'blank');
+                    break;
+                default:
+                    break; 
             }
-            speechSynthesis.speak(new SpeechSynthesisUtterance(textToSpeak));
-         };
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            speechSynthesis.speak(utterance);
+        };
     }
 
     function renderMultipleChoice(q) {
@@ -725,6 +739,9 @@
         reviewContainer.innerHTML = '<h3>Answer Review</h3>';
         gameState.answeredQuestions.forEach(item => {
             const correctAnsString = (q) => {
+                if (q.type === 'true-false') {
+                    return q.answer ? 'True' : 'False';
+                }
                 if (typeof q.answer === 'object') {
                     if(q.type === 'word-dissection') {
                         let parts = [];
