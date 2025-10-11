@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Terminology Game: Respiratory System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f8fafc; /* Slate-50 - A very clean, light grey */
+            overflow-y: auto; /* Enable scrolling */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.7); /* More transparent for a glassier look */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(100, 116, 139, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px -10px rgba(14, 165, 233, 0.15); /* Sky blue shadow */
+        }
+
+        .feedback-correct {
+            border-left: 5px solid #34d399;
+            background-color: #f0fdfa;
+            color: #047857;
+        }
+        .feedback-incorrect {
+            border-left: 5px solid #fb7185;
+            background-color: #fff1f2;
+            color: #be123c;
+        }
+
+        .btn-primary {
+            background: #0ea5e9; /* Sky-500 */
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 20px -5px rgba(14, 165, 233, 0.5);
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 25px -5px rgba(14, 165, 233, 0.7);
+            background: #0284c7; /* Sky-600 */
+        }
+        .btn-primary:disabled {
+            background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: #f8fafc;
+            color: #0284c7;
+            border: 1px solid #e0f2fe;
+            border-radius: 9999px;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .btn-secondary:hover {
+            background-color: #f0f9ff;
+            transform: scale(1.05);
+            border-color: #bae6fd;
+        }
+
+        .btn-exit {
+            color: #f43f5e;
+            border-color: #fecdd3;
+        }
+
+        .btn-exit:hover {
+            background-color: #fff1f2;
+            border-color: #fda4af;
+        }
+
+        .icon-btn {
+            background: #ffffff;
+            border-radius: 9999px;
+            padding: 0.6rem;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .icon-btn:hover {
+            background: #f8fafc;
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .match-item {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .match-item:active { cursor: grabbing; }
+
+        .dragging {
+            opacity: 0.6;
+            transform: scale(1.08) rotate(3deg);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+        }
+        .drop-hover {
+            border-color: #38bdf8;
+            background-color: #e0f2fe;
+        }
+        #pause-overlay {
+            background-color: rgba(248, 250, 252, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .progress-bar-segment {
+            transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-800">
+
+    <div id="app" class="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto min-h-screen flex flex-col justify-center relative">
+        <!-- Game content will be rendered here -->
+    </div>
+
+    <div id="pause-overlay" class="fixed inset-0 z-50 hidden items-center justify-center" onclick="togglePause()">
+        <div class="content-card p-12 rounded-3xl text-center shadow-2xl">
+            <h2 class="text-4xl font-bold text-sky-800">Game Paused</h2>
+            <p class="text-slate-600 mt-2">Click anywhere to resume</p>
+        </div>
+    </div>
+
+    <script>
+        const gameData = {
+            activities: [
+                { id: 'prefix-suffix', title: 'Prefix & Suffix Breakdown', type: 'breakdown', questions: [
+                    { term: "Otolaryngologist", parts: [{ label: "Root 1", value: "ot/o", meaning: "ear" }, { label: "Root 2", value: "laryng/o", meaning: "larynx" }, { label: "Suffix", value: "-ologist", meaning: "specialist" }], hint: "The suffix '-ologist' means specialist." },
+                    { term: "Dysphonia", parts: [{ label: "Prefix", value: "dys-", meaning: "bad, difficult, painful" }, { label: "Root", value: "phon/o", meaning: "voice or sound" }, { label: "Suffix", value: "-ia", meaning: "abnormal condition" }], hint: "The prefix 'dys-' often indicates something is wrong or difficult." },
+                    { term: "Tracheorrhagia", parts: [{ label: "Root", value: "trache/o", meaning: "trachea" }, { label: "Suffix", value: "-rrhagia", meaning: "bleeding" }], hint: "The suffix '-rrhagia' means bursting forth or bleeding." },
+                    { term: "Bronchoscopy", parts: [{ label: "Root", value: "bronch/o", meaning: "bronchus" }, { label: "Suffix", value: "-scopy", meaning: "visual examination" }], hint: "The suffix '-scopy' refers to a visual examination." },
+                    { term: "Thoracotomy", parts: [{ label: "Root", value: "thorac/o", meaning: "chest" }, { label: "Suffix", value: "-otomy", meaning: "surgical incision" }], hint: "The suffix '-otomy' means a surgical incision." },
+                    { term: "Anoxia", parts: [{ label: "Prefix", value: "an-", meaning: "without" }, { label: "Root", value: "ox/i", meaning: "oxygen" }, { label: "Suffix", value: "-ia", meaning: "condition" }], hint: "The prefix 'an-' means without or an absence of." },
+                    { term: "Polysomnography", parts: [{ label: "Prefix", value: "poly-", meaning: "many" }, { label: "Root", value: "somn/o", meaning: "sleep" }, { label: "Suffix", value: "-graphy", meaning: "process of recording" }], hint: "This term means the study of sleep cycles and problems." },
+                    { term: "Spirometry", parts: [{ label: "Root", value: "spir/o", meaning: "to breathe" }, { label: "Suffix", value: "-metry", meaning: "to measure" }], hint: "A spirometer is a recording device that measures the amount of air inhaled or exhaled." },
+                    { term: "Tachypnea", parts: [{ label: "Prefix", value: "tachy-", meaning: "rapid" }, { label: "Suffix", value: "-pnea", meaning: "breathing" }], hint: "The opposite of bradypnea." },
+                    { term: "Hemoptysis", parts: [{ label: "Root", value: "hem/o", meaning: "blood" }, { label: "Suffix", value: "-ptysis", meaning: "spitting" }], hint: "This means spitting of blood or blood-stained sputum." },
+                    { term: "Aphonia", parts: [{ label: "Prefix", value: "a-", meaning: "without" }, { label: "Root", value: "phon/o", meaning: "sound or voice" }, { label: "Suffix", value: "-ia", meaning: "condition" }], hint: "The loss of the ability of the larynx to produce normal speech sounds." },
+                    { term: "Bradypnea", parts: [{ label: "Prefix", value: "brady-", meaning: "slow" }, { label: "Suffix", value: "-pnea", meaning: "breathing" }], hint: "An abnormally slow rate of respiration." },
+                    { term: "Laryngectomy", parts: [{ label: "Root", value: "laryng/o", meaning: "larynx" }, { label: "Suffix", value: "-ectomy", meaning: "surgical removal" }], hint: "Surgical removal of the larynx." },
+                    { term: "Pharyngitis", parts: [{ label: "Root", value: "pharyng/o", meaning: "pharynx" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "Also known as a sore throat." },
+                    { term: "Pneumonectomy", parts: [{ label: "Root", value: "pneumon/o", meaning: "lung" }, { label: "Suffix", value: "-ectomy", meaning: "surgical removal" }], hint: "Surgical removal of all or part of a lung." },
+                    { term: "Rhinorrhea", parts: [{ label: "Root", value: "rhin/o", meaning: "nose" }, { label: "Suffix", value: "-rrhea", meaning: "flow or discharge" }], hint: "Also known as a runny nose." },
+                    { term: "Sinusotomy", parts: [{ label: "Root", value: "sinus/o", meaning: "sinus" }, { label: "Suffix", value: "-otomy", meaning: "surgical incision" }], hint: "A surgical incision into a sinus." },
+                    { term: "Tracheostomy", parts: [{ label: "Root", value: "trache/o", meaning: "trachea" }, { label: "Suffix", value: "-ostomy", meaning: "surgically creating an opening" }], hint: "The surgical creation of an opening into the trachea to insert a tube." },
+                    { term: "Epiglottitis", parts: [{ label: "Root", value: "epiglott/o", meaning: "epiglottis" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "Inflammation of the epiglottis." },
+                    { term: "Laryngospasm", parts: [{ label: "Root", value: "laryng/o", meaning: "larynx" }, { label: "Suffix", value: "-spasm", meaning: "sudden involuntary contraction" }], hint: "The sudden spasmodic closure of the larynx." }
+                ]},
+                { id: 'mix-match', title: 'Mix and Match', type: 'match', instructions: 'Drag the definition from the bank to the correct medical term.', questions: [
+                    { pairs: [ { term: "Epistaxis", definition: "A nosebleed." }, { term: "Cystic Fibrosis", definition: "A genetic disorder where lungs are clogged with thick mucus." }, { term: "Pertussis", definition: "Bacterial infection of the upper respiratory tract, also known as whooping cough." }, { term: "Ventilator", definition: "Mechanical device for artificial respiration." }, { term: "CPAP Machine", definition: "Device used to treat sleep apnea by using mild air pressure." } ], hint: "Match the devices and common conditions." },
+                    { pairs: [ { term: "Ambu Bag", definition: "An emergency resuscitator used to assist ventilation." }, { term: "Nebulizer", definition: "Administers medication as a mist to be inhaled." }, { term: "Asphyxia", definition: "Loss of consciousness due to the body's inability to deliver oxygen." }, { term: "Cheyne-Stokes Respiration", definition: "Irregular pattern of breathing with alternating rapid or shallow respiration followed by slower respiration or apnea." }, { term: "Croup", definition: "Acute respiratory infection in children characterized by a barking cough." } ], hint: "Focus on emergency equipment and breathing patterns." },
+                    { pairs: [ { term: "Diphtheria", definition: "Bacterial infection of the throat and upper respiratory tract." }, { term: "Emphysema", definition: "Progressive loss of lung function characterized by destruction of alveoli walls." }, { term: "Hemothorax", definition: "A collection of blood in the pleural cavity." }, { term: "Pyothorax", definition: "A collection of pus in the pleural cavity." }, { term: "Pneumothorax", definition: "The accumulation of air in the pleural space." } ], hint: "These terms describe serious lung and pleural cavity conditions." },
+                    { pairs: [ { term: "Pulmonary Edema", definition: "An accumulation of fluid in lung tissues, especially the alveoli." }, { term: "Pulmonary Embolism", definition: "Sudden blockage of a pulmonary artery by a foreign matter or an embolus." }, { term: "Tuberculosis", definition: "An infectious disease caused by Mycobacterium tuberculosis." }, { term: "Bronchiectasis", definition: "Permanent dilation of the bronchi caused by chronic infection and inflammation." }, { term: "Pleurisy", definition: "Inflammation of the pleura." } ], hint: "These terms relate to fluid, blockages, and inflammation in the pulmonary system." }
+                ]},
+                { id: 'true-false', title: 'True or False', type: 'choice', questions: [
+                    { question: "The right lung has two lobes, and the left lung has three lobes.", answer: "False", explanation: "The right lung has three lobes, while the left lung has only two to make room for the heart.", hint: "Think about which side of the chest the heart is on." },
+                    { question: "Chest percussion is a therapy to remove excess mucus from the lungs.", answer: "True", explanation: "This therapy involves rhythmically clapping the chest to help drain secretions.", hint: "This is a physical therapy technique." },
+                    { question: "A nebulizer is a machine that administers medication as a mist to be inhaled.", answer: "True", explanation: "Nebulizers are commonly used for patients with asthma or other respiratory diseases.", hint: "Think about how asthma medication is often administered." },
+                    { question: "A non-rebreather mask allows the patient to reuse a portion of their exhaled breath.", answer: "False", explanation: "A NON-rebreather mask is designed to deliver high concentrations of oxygen and prevents rebreathing of exhaled air. A rebreather mask allows partial reuse.", hint: "Consider the meaning of the prefix 'non-'." },
+                    { question: "Hyperbaric oxygen therapy involves breathing pure oxygen in a pressurized chamber.", answer: "True", explanation: "This therapy allows the lungs to gather more oxygen, which promotes healing.", hint: "This therapy is used for conditions like decompression sickness and wounds that won't heal." },
+                    { question: "The mediastinum is the cavity located between the lungs.", answer: "True", explanation: "This cavity contains the heart, aorta, esophagus, and trachea.", hint: "It's the central compartment of the thoracic cavity." },
+                    { question: "The visceral pleura is the outer layer of the pleura that lines the walls of the thoracic cavity.", answer: "False", explanation: "The visceral pleura is the inner layer that covers the surface of each lung. The parietal pleura is the outer layer.", hint: "'Visceral' pertains to the organs themselves." },
+                    { question: "The pharynx is commonly known as the windpipe.", answer: "False", explanation: "The pharynx is the throat. The trachea is the windpipe.", hint: "The pharynx has three divisions." },
+                    { question: "The epiglottis is a lid-like structure that prevents food from entering the trachea.", answer: "True", explanation: "During swallowing, it swings downward to close off the laryngopharynx.", hint: "It acts as a protective flap." },
+                    { question: "Alveoli are also known as air sacs.", answer: "True", explanation: "These are the small, grape-like clusters where gas exchange occurs.", hint: "This is where oxygen enters the bloodstream." },
+                    { question: "A pulmonologist is a physician who specializes in treating disorders of the ears, nose, and throat.", answer: "False", explanation: "A pulmonologist specializes in the respiratory system. An otolaryngologist specializes in ENT.", hint: "'Pulmon/o' refers to the lung." },
+                    { question: "Eupnea is the medical term for difficult or labored breathing.", answer: "False", explanation: "Eupnea means easy or normal breathing. Dyspnea means difficult breathing.", hint: "The prefix 'eu-' means good or normal." },
+                    { question: "Hypoxia is the condition of having adequate oxygen levels in body tissues.", answer: "False", explanation: "Hypoxia is the condition of having deficient oxygen levels. 'Hypo-' means deficient.", hint: "The prefix 'hypo-' means deficient or decreased." },
+                    { question: "A septoplasty is the surgical repair of the partition between the two nasal cavities.", answer: "True", explanation: "This procedure is done to correct a deviated nasal septum.", hint: "'Sept/o' means septum, and '-plasty' means surgical repair." },
+                    { question: "A pulse oximeter is attached to a finger or earlobe to measure the oxygen saturation level in the blood.", answer: "True", explanation: "This is a noninvasive method of monitoring a person's oxygen saturation.", hint: "It measures the percentage of hemoglobin carrying oxygen." },
+                    { question: "Silicosis is a lung disease caused by inhaling asbestos particles.", answer: "False", explanation: "Silicosis is caused by inhaling silica dust. Asbestosis is caused by inhaling asbestos particles.", hint: "The name of the disease often indicates the causative agent." },
+                    { question: "Walking pneumonia is an informal term for a milder but longer-lasting form of pneumonia.", answer: "True", explanation: "It's also known as mycoplasma pneumonia.", hint: "Patients with this condition may not feel sick enough to stay home." },
+                    { question: "A tracheotomy is an emergency procedure in which an incision is made into the trachea to gain access to the airway below a blockage.", answer: "True", explanation: "This is different from a tracheostomy, which involves creating a long-term opening.", hint: "An '-otomy' is a surgical incision." },
+                    { question: "A lobectomy is the surgical removal of a lobe of an organ, such as the lung.", answer: "True", explanation: "This procedure is often performed to remove cancerous tissue.", hint: "Lungs are divided into lobes." },
+                    { question: "Asthma is a chronic inflammatory disease of the bronchial tubes, often triggered by an allergic reaction.", answer: "True", explanation: "It is characterized by episodes of severe breathing difficulty, coughing, and wheezing.", hint: "Often treated with inhalers." }
+                ]},
+                { id: 'fill-blank', title: 'Fill in the Blank', type: 'fill', questions: [
+                    { sentence: "The __ are the very small, grape-like clusters at the end of each bronchiole.", answer: "alveoli", hint: "These are also known as air sacs." },
+                    { sentence: "A __ is a medication that relaxes and expands the bronchial passages into the lungs.", answer: "bronchodilator", hint: "This is often administered via an inhaler for asthma." },
+                    { sentence: "The incomplete expansion of part or all of a lung is known as __.", answer: "atelectasis", hint: "This can be caused by a blockage of the air passages." },
+                    { sentence: "A __ cannula is a small tube with two prongs that delivers oxygen through the nose.", answer: "nasal", hint: "The term relates to the nose." },
+                    { sentence: "Also known as the throat, the __ receives air after it passes through the nose or mouth.", answer: "pharynx", hint: "It's divided into three regions: naso-, oro-, and laryngo-." },
+                    { sentence: "The medical term for the voice box is the __.", answer: "larynx", hint: "It contains the vocal cords." },
+                    { sentence: "The __ is the muscle that separates the thoracic cavity from the abdomen.", answer: "diaphragm", hint: "It is essential for breathing." },
+                    { sentence: "__ is the medical term for the condition commonly known as a nosebleed.", answer: "epistaxis", hint: "This can be caused by injury, dry air, or high blood pressure." },
+                    { sentence: "An abnormally rapid rate of respiration, usually more than 20 breaths per minute, is known as __.", answer: "tachypnea", hint: "The prefix 'tachy-' means rapid." },
+                    { sentence: "A __ is a physician who specializes in diagnosing and treating diseases and disorders of the respiratory system.", answer: "pulmonologist", hint: "The combining form 'pulmon/o' means lung." },
+                    { sentence: "The act of taking air in as the diaphragm contracts and pulls downward is __.", answer: "inhalation", hint: "The opposite of exhalation." },
+                    { sentence: "__ is a bluish discoloration of the skin and mucous membranes caused by a lack of adequate oxygen in the blood.", answer: "cyanosis", hint: "The combining form 'cyan/o' means blue." },
+                    { sentence: "A __ is an external monitor placed on the patient's fingertip or earlobe to measure the oxygen saturation level in the blood.", answer: "pulse oximeter", hint: "It provides a reading of SpO2." },
+                    { sentence: "The medical term for whooping cough is __.", answer: "pertussis", hint: "It is a contagious bacterial infection." },
+                    { sentence: "A __ is a surgical incision into the chest walls to open the pleural cavity for biopsy or treatment.", answer: "thoracotomy", hint: "'Thorac/o' means chest." },
+                    { sentence: "The diagnostic test that measures physiological activity during sleep is known as __.", answer: "polysomnography", hint: "Also known as a sleep study." },
+                    { sentence: "__ is the abnormal buildup of carbon dioxide in the blood.", answer: "hypercapnia", hint: "'Hyper-' means excessive, and 'capn' means carbon dioxide." },
+                    { sentence: "The term meaning an absence of spontaneous respiration is __.", answer: "apnea", hint: "'a-' means without." },
+                    { sentence: "A __ is an inhaled medication that reduces airway inflammation.", answer: "corticosteroid", hint: "Used to treat conditions like asthma." },
+                    { sentence: "The __ pleura is the inner layer of pleura that covers each lung.", answer: "visceral", hint: "This layer is attached directly to the organ." }
+                ]},
+                { id: 'case-studies', title: 'Case Studies', type: 'choice', questions: [
+                    { question: "A patient complains of snoring and frequently waking up gasping for air. A sleep study confirms they have periods where breathing stops and restarts. What is the likely diagnosis?", options: ["Asthma", "Sleep Apnea", "Pneumonia", "Emphysema"], answer: "Sleep Apnea", explanation: "Sleep apnea is characterized by pauses in breathing during sleep.", hint: "This condition is often treated with a CPAP machine." },
+                    { question: "A 7-year-old boy presents with a barking cough and stridor following an acute respiratory infection. The doctor notes swelling around the vocal cords. What is the most likely diagnosis?", options: ["Diphtheria", "Croup", "Pertussis", "Rhinorrhea"], answer: "Croup", explanation: "Croup is a common childhood condition involving inflammation of the larynx and trachea, characterized by a barking cough.", hint: "This is a common respiratory illness in young children." },
+                    { question: "A premature infant is struggling to breathe due to a lack of surfactant in the alveoli. This condition, where the air sacs collapse, is called __.", options: ["Bradypnea", "Respiratory Distress Syndrome", "Tachypnea", "Pleurisy"], answer: "Respiratory Distress Syndrome", explanation: "Often seen in premature infants, RDS is caused by a lack of surfactant, a substance that keeps alveoli open.", hint: "This condition is specific to newborns." },
+                    { question: "After surgery, a patient develops a condition where a lung fails to expand fully due to a blocked airway. An x-ray confirms the collapse. What is this condition called?", options: ["Atelectasis", "Pulmonary Edema", "Pneumothorax", "Hemothorax"], answer: "Atelectasis", explanation: "Atelectasis is the incomplete expansion or collapse of a part of the lungs.", hint: "This term literally means 'incomplete expansion'."},
+                    { question: "A coal miner presents with a chronic cough and shortness of breath after 20 years of working in the mines. A chest x-ray reveals lung scarring. What is the most likely occupational lung disease?", options: ["Asbestosis", "Anthracosis", "Silicosis", "Byssinosis"], answer: "Anthracosis", explanation: "Anthracosis, also known as black lung disease, is caused by coal dust in the lungs.", hint: "This is also known as black lung disease." },
+                    { question: "A patient is brought to the ER after a car accident with a stab wound to the chest. They are having severe difficulty breathing, and a chest x-ray shows blood in the pleural space. This condition is known as a __.", options: ["Pneumothorax", "Hemothorax", "Pyothorax", "Pulmonary Embolism"], answer: "Hemothorax", explanation: "A hemothorax is a collection of blood in the space between the chest wall and the lung.", hint: "'Hemo' means blood." },
+                    { question: "An elderly patient with a history of heart failure complains of difficulty breathing, especially when lying down. A physical exam reveals crackling sounds in the lungs. What condition is likely?", options: ["Pneumonia", "Pulmonary Edema", "Asthma", "Chronic Bronchitis"], answer: "Pulmonary Edema", explanation: "Pulmonary edema is excess fluid in the lungs, often caused by heart problems.", hint: "The fluid buildup makes it hard for the lungs to exchange oxygen." },
+                    { question: "A patient is diagnosed with a bacterial infection that causes recurrent episodes of coughing, followed by a 'whooping' sound on inhalation. What is the common name for this disease?", options: ["Diphtheria", "Tuberculosis", "Pertussis", "Influenza"], answer: "Pertussis", explanation: "Pertussis is also known as whooping cough.", hint: "The name comes from the characteristic sound made during inhalation." },
+                    { question: "A doctor performs a visual examination of the bronchi using a flexible fiber-optic device. This procedure is called a __.", options: ["Laryngoscopy", "Bronchoscopy", "Endoscopy", "Thoracoscopy"], answer: "Bronchoscopy", explanation: "A bronchoscopy is the visual examination of the bronchi using a bronchoscope.", hint: "'Bronch/o' means bronchus, and '-scopy' means visual examination." },
+                    { question: "A patient with severe emphysema undergoes surgery to remove the most diseased portions of their lung to improve function. What is this surgery called?", options: ["Lobectomy", "Pneumonectomy", "Wedge Resection", "Lung Volume Reduction Surgery"], answer: "Lung Volume Reduction Surgery", explanation: "This surgery is sometimes used for severe COPD to help the remaining lung tissue work more efficiently.", hint: "The name of the surgery describes its purpose." },
+                    { question: "A patient's blood test shows an abnormally low level of oxygen in the arterial blood. This condition is known as __.", options: ["Hypoxia", "Hypoxemia", "Hyperoxia", "Anoxia"], answer: "Hypoxemia", explanation: "Hypoxemia refers specifically to low oxygen levels in the arterial blood, while hypoxia refers to low oxygen in the tissues.", hint: "'-emia' refers to a blood condition." },
+                    { question: "A patient needs a surgical puncture of the chest wall with a needle to obtain fluid from the pleural cavity. This procedure is called __.", options: ["Thoracotomy", "Thoracentesis", "Chest tube insertion", "Pleurectomy"], answer: "Thoracentesis", explanation: "Thoracentesis is a surgical puncture to remove fluid from the pleural space.", hint: "'-centesis' means a surgical puncture to remove fluid." },
+                    { question: "A patient has a procedure to surgically create an opening into the trachea, through which an indwelling tube is inserted to facilitate breathing. This is a __.", options: ["Tracheotomy", "Tracheostomy", "Laryngectomy", "Pharyngotomy"], answer: "Tracheostomy", explanation: "A tracheostomy is the surgical creation of a stoma (opening) into the trachea.", hint: "An '-ostomy' is a surgically created opening." },
+                    { question: "A patient with a chronic cough produces phlegm ejected through the mouth. The medical term for this substance is __.", options: ["Sputum", "Mucus", "Saliva", "Phlegm"], answer: "Sputum", explanation: "Sputum is phlegm that has been coughed up from the lower airways.", hint: "This can be tested for diagnostic purposes (sputum cytology)." },
+                    { question: "A child accidentally inhales a small toy, which gets lodged in their airway. This is known as foreign body __.", options: ["Obstruction", "Aspiration", "Asphyxiation", "Inhalation"], answer: "Aspiration", explanation: "Aspiration means inhaling a foreign substance into the upper respiratory tract.", hint: "This is a common emergency in young children." },
+                    { question: "A patient with allergies experiences a runny nose. What is the medical term for this symptom?", options: ["Epistaxis", "Rhinorrhea", "Sinusitis", "Rhinitis"], answer: "Rhinorrhea", explanation: "Rhinorrhea is the watery flow of mucus from the nose.", hint: "'Rhin/o' means nose and '-rrhea' means flow." },
+                    { question: "A doctor listens to the sounds within the patient's chest using a stethoscope. This process is called __.", options: ["Percussion", "Palpation", "Auscultation", "Inspection"], answer: "Auscultation", explanation: "Auscultation is listening to sounds within the body.", hint: "This is a fundamental part of a physical examination." },
+                    { question: "A patient is treated for inflammation of the sinuses. The medical term for this is __.", options: ["Pharyngitis", "Laryngitis", "Sinusitis", "Bronchitis"], answer: "Sinusitis", explanation: "Sinusitis is inflammation of the sinuses.", hint: "'-itis' means inflammation." },
+                    { question: "An emergency medical technician uses a handheld device to force air into the lungs of a person who has stopped breathing. This device is an __.", options: ["Ambu bag", "Ventilator", "CPAP machine", "Nebulizer"], answer: "Ambu bag", explanation: "An Ambu bag is used for manual resuscitation.", hint: "Also known as a bag valve mask (BVM)." },
+                    { question: "A patient's chest x-ray shows an accumulation of air in the pleural space, causing a collapsed lung. This is known as a __.", options: ["Atelectasis", "Pneumothorax", "Hemothorax", "Pleural effusion"], answer: "Pneumothorax", explanation: "A pneumothorax is the presence of air or gas in the cavity between the lungs and the chest wall.", hint: "'Pneumo' means air." }
+                ]}
+            ]
+        };
+
+        let state = {};
+        
+        function initializeGame() {
+            state = {
+                currentActivityIndex: null,
+                scores: {},
+                attempted: {},
+                completed: {},
+                activityStartTimes: {},
+                isPaused: false,
+                startTime: null,
+                endTime: null,
+            };
+            renderMenu();
+        }
+
+        const app = document.getElementById('app');
+
+        function readAloud(textToSpeak) {
+            if ('speechSynthesis' in window && !state.isPaused) {
+                const utterance = new SpeechSynthesisUtterance(textToSpeak); utterance.lang = 'en-US';
+                window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
+            } else if (!('speechSynthesis' in window)) {
+                alert('Sorry, your browser does not support text-to-speech.');
+            }
+        }
+        
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            document.getElementById('pause-overlay').style.display = state.isPaused ? 'flex' : 'none';
+        }
+
+        function endGame() {
+            if (state.startTime && !state.endTime) state.endTime = new Date();
+            renderResultsPage();
+        }
+        
+        function returnToMenu() {
+            renderMenu();
+        }
+
+        function renderMenu() {
+            const menuHtml = `
+            <div class="min-h-screen flex flex-col justify-center">
+                <div class="text-center mb-10 fade-in">
+                    <div class="flex items-center justify-center gap-4">
+                        <svg class="w-16 h-16 text-sky-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c-2-2.2-2.7-4.2-2-6 1-2.5 3.5-5.5 3.5-5.5s0 3.5-2 5c-1.5 1-2.5 2.5-2.5 4"/><path d="M18 12c2-2.2 2.7-4.2 2-6-1-2.5-3.5-5.5-3.5-5.5s0 3.5 2 5c1.5 1 2.5 2.5 2.5 4"/><path d="M14 14h.01"/><path d="M12 22a2.5 2.5 0 0 1-2-4"/><path d="M12 18a2.5 2.5 0 0 1-2-4"/><path d="M12 14a2.5 2.5 0 0 1-2-4"/><path d="m10 10 1-2 1 2"/><path d="M10 14a2.5 2.5 0 0 0 2 4"/><path d="M12 18a2.5 2.5 0 0 0 2 4"/><path d="M12 22a2.5 2.5 0 0 0 2 4"/><path d="m14 14 1-2 1 2"/></svg>
+                        <div>
+                            <h1 class="text-5xl font-extrabold text-slate-800 tracking-tight">Respiratory System</h1>
+                            <p class="text-slate-500 mt-1 text-lg font-medium">Week 5: Medical Terminology Game</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${gameData.activities.map((activity, index) => {
+                        const attempted = state.attempted ? (state.attempted[activity.id] || 0) : 0;
+                        const score = state.scores ? (state.scores[activity.id] || 0) : 0;
+                        const isCompleted = state.completed ? state.completed[activity.id] : false;
+                        let statusText = 'Not Started';
+                        if (attempted > 0) {
+                             statusText = isCompleted ? `Completed: ${score}/${attempted}` : `In Progress: ${score}/${attempted}`;
+                        }
+                        return `<div class="content-card menu-card p-6 rounded-2xl shadow-lg cursor-pointer flex flex-col justify-between fade-in" style="animation-delay: ${100 + index * 100}ms" onclick="startActivity(${index})">
+                            <h2 class="text-xl font-bold text-slate-900">${activity.title}</h2>
+                            <div class="mt-4 text-right">
+                                <span class="text-sm font-semibold ${attempted > 0 ? 'text-sky-600' : 'text-slate-400'}">${statusText}</span>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                ${state.startTime ? `<div class="mt-8 text-center fade-in" style="animation-delay: 600ms"><button onclick="endGame()" class="btn-secondary font-bold py-2 px-6">End Game & See Results</button></div>` : ''}
+            </div>`;
+            app.innerHTML = menuHtml;
+        }
+
+        function renderProgressBar(activity, questionIndex) {
+            const isMatch = activity.type === 'match';
+            const total = isMatch ? activity.questions.length * activity.questions[0].pairs.length : activity.questions.length;
+            const attempted = (state.attempted[activity.id] || 0) + (isMatch ? (questionIndex * 5) : 0);
+            const percentage = (attempted / total) * 100;
+
+            return `
+                <div class="mb-4">
+                     <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-semibold text-sky-800">${isMatch ? `Question Set ${questionIndex+1}/${activity.questions.length}` : `Question ${questionIndex + 1}/${total}`}</span>
+                     </div>
+                    <div class="w-full bg-slate-200/70 rounded-full h-2.5">
+                        <div class="progress-bar-segment bg-gradient-to-r from-sky-400 to-cyan-400 h-2.5 rounded-full" style="width: ${percentage}%"></div>
+                    </div>
+                </div>`;
+        }
+        
+        function updateProgressBar(activity, questionIndex, itemsAnswered = 1) {
+            const isMatch = activity.type === 'match';
+            const total = isMatch ? activity.questions.length * 5 : activity.questions.length;
+            const attempted = (state.attempted[activity.id] || 0);
+            const percentage = (attempted / total) * 100;
+            const bar = document.querySelector('.progress-bar-segment');
+            if(bar) bar.style.width = `${percentage}%`;
+        }
+
+        function renderActivityShell(activity, content, questionIndex) {
+            const question = activity.questions ? activity.questions[questionIndex] : null;
+            const hintButton = (question && question.hint) || (activity.type === 'match' && activity.questions[questionIndex].hint) ? `<button id="hint-btn" onclick="showHint('${(question?.hint || activity.questions[questionIndex].hint).replace(/'/g, "\\'")}')" class="btn-secondary text-sm font-semibold py-1 px-3">Hint</button>` : '';
+            return `
+                <div class="fade-in">
+                ${renderProgressBar(activity, questionIndex)}
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <button onclick="returnToMenu()" class="btn-secondary text-sm font-semibold py-2 px-4" aria-label="Back to Menu">Menu</button>
+                        <button onclick="endGame()" class="ml-2 btn-secondary btn-exit text-sm font-semibold py-2 px-4" aria-label="End Game">Exit</button>
+                    </div>
+                    <div class="flex items-center gap-4">${hintButton}<button onclick="togglePause()" class="icon-btn" aria-label="Pause Game"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></button></div>
+                </div>
+                <div class="text-center mb-4">
+                    <h1 class="text-3xl font-bold text-slate-800">${activity.title}</h1>
+                </div>
+                <div class="content-card p-8 rounded-3xl shadow-xl">
+                    ${activity.instructions ? `<p class="text-center text-slate-500 mb-6">${activity.instructions}</p>` : ''}
+                    ${content}
+                </div>
+                </div>`;
+        }
+        
+        function showHint(hintText) {
+            const hintContainer = document.getElementById('hint-container');
+            if(hintContainer) {
+                hintContainer.innerHTML = `<div class="mt-4 p-3 bg-sky-50 border border-sky-200 text-sky-800 rounded-lg text-center text-sm fade-in">${hintText}</div>`;
+            }
+            document.getElementById('hint-btn')?.setAttribute('disabled', true);
+        }
+
+        function renderNavigation(activity, isLastInActivity) {
+             const isLastActivity = state.currentActivityIndex === gameData.activities.length - 1;
+             let nextButtonHtml = '';
+             if (isLastInActivity) {
+                nextButtonHtml = `<button onclick="endGame()" class="btn-primary font-semibold py-3 px-8">See Results</button>`;
+             } else {
+                 const nextIndex = (activity.currentQuestionIndex || 0) + 1;
+                 let nextFunctionCall = '';
+                 if (activity.type === 'breakdown') nextFunctionCall = `renderBreakdown(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+                 if (activity.type === 'match') nextFunctionCall = `renderMatch(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+                 if (activity.type === 'choice') nextFunctionCall = `renderChoice(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+                 if (activity.type === 'fill') nextFunctionCall = `renderFill(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+                 
+                 if (isLastInActivity) {
+                     nextButtonHtml = `<button onclick="nextActivity()" class="btn-primary font-semibold py-3 px-8">Next Activity</button>`;
+                 } else {
+                     nextButtonHtml = `<button onclick="${nextFunctionCall}" class="btn-primary font-semibold py-3 px-8">Next Question</button>`;
+                 }
+             }
+            return `<div class="mt-8 flex justify-end fade-in">${nextButtonHtml}</div>`;
+        }
+
+        function enforceCompletion(formId, buttonId) {
+             const form = document.getElementById(formId); const inputs = form.querySelectorAll('input[type="text"]');
+             const submitButton = form.querySelector(`#${buttonId}`);
+             function validateInputs() { submitButton.disabled = ![...inputs].every(input => input.value.trim() !== ''); }
+             inputs.forEach(input => input.addEventListener('input', validateInputs)); validateInputs();
+        }
+
+        function handleAnswer(activity, isCorrect, count = 1) {
+            if (isCorrect) state.scores[activity.id] = (state.scores[activity.id] || 0) + (isCorrect === true ? 1 : isCorrect);
+            state.attempted[activity.id] = (state.attempted[activity.id] || 0) + count;
+            updateProgressBar(activity, activity.currentQuestionIndex, count);
+        }
+
+        function renderBreakdown(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const question = activity.questions[questionIndex];
+            const contentHtml = `<div class="text-center mb-6"><p class="text-lg text-slate-500">Identify the parts for the term:</p><div class="flex justify-center items-center gap-2"><h2 class="text-4xl font-bold text-slate-700 tracking-tight">${question.term}</h2><button onclick="readAloud('${question.term}')" class="icon-btn" aria-label="Read term aloud"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button></div></div><form id="breakdown-form"><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">${question.parts.map((part, index) => `<div class="space-y-2"><label class="font-semibold text-slate-700">${part.label}</label><input type="text" placeholder="Enter Part" data-part-index="${index}" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"><p class="text-sm text-slate-600 p-3 bg-slate-100 rounded-lg text-center">Meaning: <span class="font-semibold">${part.meaning}</span></p></div>`).join('')}</div><div class="flex justify-center"><button type="submit" id="submit-breakdown" class="btn-primary font-bold py-3 px-8">Check Answer</button></div></form><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div id="navigation-container"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            enforceCompletion('breakdown-form', 'submit-breakdown');
+            document.getElementById('breakdown-form').onsubmit = (e) => {
+                e.preventDefault();
+                const form = e.target; form.querySelector('button[type="submit"]').disabled = true; let isCorrect = true;
+                question.parts.forEach((part, index) => { const partInput = form.querySelector(`input[data-part-index="${index}"]`); partInput.readOnly = true; if (partInput.value.trim().toLowerCase() === part.value.toLowerCase()) { partInput.classList.add('bg-green-100', 'border-green-400'); } else { isCorrect = false; partInput.classList.add('bg-red-100', 'border-red-400'); } });
+                handleAnswer(activity, isCorrect);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${!isCorrect ? `<p class="mt-1 text-sm">Correct answers: ${question.parts.map(p => `<strong>${p.value}</strong>`).join(', ')}</p>` : ''}</div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if (isLast) state.completed[activity.id] = true;
+                document.getElementById('navigation-container').innerHTML = renderNavigation(activity, isLast);
+            };
+        }
+        
+        function renderMatch(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const question = activity.questions[questionIndex]; const pairs = question.pairs;
+            let shuffledDefinitions = pairs.map(p => p.definition).sort(() => 0.5 - Math.random());
+            const contentHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"><div class="space-y-4">${pairs.map((pair, index) => `<div class="flex items-center gap-4"><div class="w-2/5 font-semibold bg-sky-50 p-4 rounded-lg border border-sky-200">${pair.term}</div><div id="target-${index}" data-term="${pair.term}" class="match-target w-3/5 min-h-[4rem] bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 italic p-2">Drop here</div></div>`).join('')}</div><div id="answer-bank" class="space-y-4 bg-slate-50 p-4 rounded-lg min-h-[20rem]">${shuffledDefinitions.map((def, index) => `<div id="def-${index}" draggable="true" data-definition="${def}" class="match-item bg-white p-3 rounded-lg shadow cursor-grab active:cursor-grabbing border border-slate-200">${def}</div>`).join('')}</div></div><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div class="mt-8 flex justify-center"><button id="check-match" class="btn-primary font-bold py-3 px-8">Check Answers</button></div><div id="navigation-container" class="hidden"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex); 
+            let draggedItem = null;
+            document.querySelectorAll('.match-item').forEach(item => { item.addEventListener('dragstart', (e) => { draggedItem = e.target; setTimeout(() => e.target.classList.add('dragging'), 0); }); item.addEventListener('dragend', () => { draggedItem?.classList.remove('dragging'); draggedItem = null; }); });
+            const allTargets = [...document.querySelectorAll('.match-target'), document.getElementById('answer-bank')];
+            allTargets.forEach(target => { target.addEventListener('dragover', (e) => { e.preventDefault(); target.classList.add('drop-hover'); }); target.addEventListener('dragleave', () => target.classList.remove('drop-hover')); target.addEventListener('drop', (e) => { e.preventDefault(); target.classList.remove('drop-hover'); if (draggedItem) { if (target.children.length > 0 && target.id !== 'answer-bank') document.getElementById('answer-bank').appendChild(target.children[0]); if(target.id !== 'answer-bank') target.innerHTML = ''; target.appendChild(draggedItem); } }); });
+            document.getElementById('check-match').addEventListener('click', (e) => {
+                e.target.disabled = true; let correctCount = 0;
+                document.querySelectorAll('.match-target').forEach(target => { const droppedItem = target.querySelector('.match-item'); const correctPair = pairs.find(p => p.term === target.dataset.term); if (droppedItem && droppedItem.dataset.definition === correctPair.definition) { correctCount++; target.classList.remove('border-slate-300', 'border-dashed'); target.classList.add('border-green-500', 'bg-green-50'); } else { target.classList.remove('border-slate-300', 'border-dashed'); target.classList.add('border-red-500', 'bg-red-50'); } });
+                handleAnswer(activity, correctCount, pairs.length);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${correctCount === pairs.length ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg text-center"><p class="font-bold">You got ${correctCount} out of ${pairs.length} correct!</p></div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if (isLast) state.completed[activity.id] = true;
+                const navContainer = document.getElementById('navigation-container'); navContainer.classList.remove('hidden'); navContainer.innerHTML = renderNavigation(activity, isLast);
+            });
+        }
+        
+        function renderChoice(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const questionData = activity.questions[questionIndex]; 
+            const options = questionData.options || ['True', 'False'];
+            const contentHtml = `<div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200"><div class="flex justify-center items-center gap-2"><p class="text-xl text-center font-medium">${questionData.question}</p><button onclick="readAloud('${questionData.question.replace(/'/g, "\\'")}')" class="icon-btn" aria-label="Read question aloud"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button></div></div><div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">${options.map(option => `<button data-answer="${option}" class="text-left p-4 border-2 border-slate-200 rounded-lg hover:bg-sky-50 hover:border-sky-500 transition-all duration-200 font-medium">${option}</button>`).join('')}</div><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div id="navigation-container"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            document.querySelectorAll('#options-container button').forEach(button => {
+                button.onclick = () => {
+                    const isCorrect = button.dataset.answer === questionData.answer;
+                    document.querySelectorAll('#options-container button').forEach(btn => { btn.disabled = true; if(btn.dataset.answer === questionData.answer) btn.classList.add('bg-green-100', 'border-green-500', 'ring-2', 'ring-green-500'); });
+                    if (!isCorrect) button.classList.add('bg-red-100', 'border-red-500');
+                    handleAnswer(activity, isCorrect);
+                    document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${questionData.explanation ? `<p class="mt-1 text-sm">${questionData.explanation}</p>` : ''}</div>`;
+                    const isLast = questionIndex >= activity.questions.length - 1;
+                    if(isLast) state.completed[activity.id] = true;
+                    document.getElementById('navigation-container').innerHTML = renderNavigation(activity, isLast);
+                }
+            });
+        }
+        
+        function renderFill(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex; const question = activity.questions[questionIndex];
+            const sentenceParts = question.sentence.split('__');
+            const contentHtml = `<form id="fill-form"><div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200 text-center text-xl"><label for="blank-input" class="flex justify-center items-center gap-2 flex-wrap"><span>${sentenceParts[0]}</span><input type="text" id="blank-input" class="mx-2 p-2 w-48 text-center border-b-2 border-slate-400 bg-transparent focus:outline-none focus:border-sky-500 font-semibold" autocomplete="off"><span>${sentenceParts[1]}</span><button type="button" onclick="readAloud('${question.sentence.replace('__', 'blank')}')" class="icon-btn" aria-label="Read sentence aloud"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button></label></div><div class="flex justify-center"><button type="submit" id="submit-fill" class="btn-primary font-bold py-3 px-8">Check Answer</button></div></form><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div id="navigation-container"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            document.getElementById('blank-input').focus(); enforceCompletion('fill-form', 'submit-fill');
+            document.getElementById('fill-form').onsubmit = (e) => {
+                e.preventDefault(); const form = e.target; const input = form.querySelector('#blank-input');
+                const isCorrect = input.value.trim().toLowerCase() === question.answer.toLowerCase();
+                form.querySelector('button[type="submit"]').disabled = true; input.readOnly = true;
+                if (isCorrect) input.classList.add('border-green-500', 'bg-green-50'); else input.classList.add('border-red-500', 'bg-red-50');
+                handleAnswer(activity, isCorrect);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${!isCorrect ? `<p class="mt-1 text-sm">The correct answer is: <strong>${question.answer}</strong></p>` : ''}</div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if(isLast) state.completed[activity.id] = true;
+                document.getElementById('navigation-container').innerHTML = renderNavigation(activity, isLast);
+            };
+        }
+
+        function renderResultsPage() {
+            let timeString = 'N/A';
+            if (state.startTime && state.endTime) {
+                const timeDiff = state.endTime - state.startTime; const seconds = String(Math.floor((timeDiff / 1000) % 60)).padStart(2, '0');
+                const minutes = String(Math.floor((timeDiff / (1000 * 60)) % 60)).padStart(2, '0');
+                timeString = `${minutes}:${seconds}`;
+            }
+            const resultsHtml = `
+            <div class="fade-in">
+                <div class="text-center mb-8"><h1 class="text-5xl font-extrabold text-slate-800">Game Over!</h1><p class="text-slate-500 mt-2 text-lg">Here's your performance summary</p></div>
+                <div class="content-card p-8 rounded-3xl shadow-xl">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300/70"><span class="font-bold text-xl text-slate-700">Total Time</span><span class="font-bold text-xl text-sky-700">${timeString}</span></div>
+                    <div class="space-y-4">
+                        ${gameData.activities.map(activity => {
+                            const score = state.scores[activity.id] || 0;
+                            const total = activity.type === 'match' ? activity.questions.length * activity.questions[0].pairs.length : activity.questions.length;
+                            const attempted = state.attempted[activity.id] || 0;
+                            const started = state.activityStartTimes[activity.id];
+                            let scoreDisplay = 'Not Started';
+                            if (started) {
+                                scoreDisplay = attempted > 0 ? `Score: ${score}/${attempted}` : 'Score: 0/0';
+                            }
+                            const startTimeDisplay = started ? started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                            return `<div class="p-4 rounded-lg ${started ? 'bg-white/60' : 'bg-slate-100/60'} grid grid-cols-4 items-center gap-4">
+                                <div class="col-span-2">
+                                    <p class="font-semibold text-slate-800">${activity.title}</p>
+                                    ${started ? `<p class="text-xs text-slate-500">Started at ${startTimeDisplay}</p>` : ''}
+                                </div>
+                                <span class="font-medium text-center ${started ? 'text-slate-600' : 'text-slate-400'} col-span-1">Attempted: ${attempted}/${total}</span>
+                                <span class="font-bold text-right ${started ? 'text-sky-600' : 'text-slate-500'} col-span-1">${scoreDisplay}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="mt-8 flex justify-center gap-4">
+                        <button onclick="returnToMenu()" class="btn-secondary font-bold py-3 px-8">Back to Menu</button>
+                        <button onclick="initializeGame()" class="btn-primary font-bold py-3 px-8">Play Again</button>
+                    </div>
+                </div>
+            </div>`;
+            app.innerHTML = resultsHtml;
+        }
+
+        function startActivity(index) {
+            document.getElementById('app').classList.remove('justify-center');
+            if (!state.startTime) state.startTime = new Date();
+            const activity = gameData.activities[index];
+            if(!state.activityStartTimes[activity.id]) {
+                state.activityStartTimes[activity.id] = new Date();
+            }
+            state.currentActivityIndex = index;
+            if(!state.scores[activity.id]) state.scores[activity.id] = 0;
+            if(!state.attempted[activity.id]) state.attempted[activity.id] = 0;
+            let questionIndex = 0;
+            if(activity.type === 'match') {
+                questionIndex = Math.floor(state.attempted[activity.id] / 5);
+                if (questionIndex >= activity.questions.length) questionIndex = activity.questions.length - 1;
+            } else {
+                 questionIndex = state.attempted[activity.id] || 0;
+                 if (questionIndex >= activity.questions.length) questionIndex = activity.questions.length - 1;
+            }
+
+            switch (activity.type) {
+                case 'breakdown': renderBreakdown(activity, questionIndex); break;
+                case 'match': renderMatch(activity, questionIndex); break;
+                case 'choice': renderChoice(activity, questionIndex); break;
+                case 'fill': renderFill(activity, questionIndex); break;
+                default: renderMenu();
+            }
+        }
+        
+        function nextActivity() {
+            if (state.currentActivityIndex < gameData.activities.length - 1) {
+                startActivity(state.currentActivityIndex + 1);
+            } else { endGame(); }
+        }
+        
+        initializeGame();
+    </script>
+</body>
+</html>
+
