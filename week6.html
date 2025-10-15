@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Terminology Game: Digestive System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f8fafc; /* Slate-50 - A very clean, light grey */
+            overflow-y: auto; /* Enable scrolling */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.7); /* More transparent for a glassier look */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(100, 116, 139, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px -10px rgba(14, 165, 233, 0.15); /* Sky blue shadow */
+        }
+
+        .feedback-correct {
+            border-left: 5px solid #34d399;
+            background-color: #f0fdfa;
+            color: #047857;
+        }
+        .feedback-incorrect {
+            border-left: 5px solid #fb7185;
+            background-color: #fff1f2;
+            color: #be123c;
+        }
+
+        .feedback-warning {
+            border-left: 5px solid #f59e0b; /* Amber-500 */
+            background-color: #fffbeb;
+            color: #b45309;
+        }
+
+        .btn-primary {
+            background: #0ea5e9; /* Sky-500 */
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 20px -5px rgba(14, 165, 233, 0.5);
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 25px -5px rgba(14, 165, 233, 0.7);
+            background: #0284c7; /* Sky-600 */
+        }
+        .btn-primary:disabled {
+            background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: #f8fafc;
+            color: #0284c7;
+            border: 1px solid #e0f2fe;
+            border-radius: 9999px;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .btn-secondary:hover {
+            background-color: #f0f9ff;
+            transform: scale(1.05);
+            border-color: #bae6fd;
+        }
+
+        .btn-exit {
+            color: #f43f5e;
+            border-color: #fecdd3;
+        }
+
+        .btn-exit:hover {
+            background-color: #fff1f2;
+            border-color: #fda4af;
+        }
+
+        .icon-btn {
+            background: #ffffff;
+            border-radius: 9999px;
+            padding: 0.6rem;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .icon-btn:hover {
+            background: #f8fafc;
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .match-item, .build-item {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .match-item:active, .build-item:active { cursor: grabbing; }
+
+        .dragging {
+            opacity: 0.6;
+            transform: scale(1.08) rotate(3deg);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+        }
+        .drop-hover {
+            border-color: #38bdf8;
+            background-color: #e0f2fe;
+        }
+        #pause-overlay {
+            background-color: rgba(248, 250, 252, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .progress-bar-segment {
+            transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+         .story-blank {
+            border-bottom: 2px solid #38bdf8;
+            background-color: #f0f9ff;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-800">
+
+    <div id="app" class="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto min-h-screen flex flex-col justify-center relative">
+        <!-- Game content will be rendered here -->
+    </div>
+
+    <div id="pause-overlay" class="fixed inset-0 z-50 hidden items-center justify-center" onclick="togglePause()">
+        <div class="content-card p-12 rounded-3xl text-center shadow-2xl">
+            <h2 class="text-4xl font-bold text-sky-800">Game Paused</h2>
+            <p class="text-slate-600 mt-2">Click anywhere to resume</p>
+        </div>
+    </div>
+
+    <script>
+        const gameData = {
+            activities: [
+                { id: 'prefix-suffix', title: 'Prefix & Suffix Breakdown', type: 'breakdown', questions: [
+                    { term: "Gastroenteritis", parts: [{ label: "Root 1", value: "gastr/o", meaning: "stomach" }, { label: "Root 2", value: "enter/o", meaning: "small intestine" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "This term describes inflammation of the stomach and small intestine." },
+                    { term: "Dysphagia", parts: [{ label: "Prefix", value: "dys-", meaning: "difficult" }, { label: "Suffix", value: "-phagia", meaning: "swallowing" }], hint: "The prefix 'dys-' often indicates difficulty or pain." },
+                    { term: "Colectomy", parts: [{ label: "Root", value: "col", meaning: "colon" }, { label: "Suffix", value: "-ectomy", meaning: "surgical removal" }], hint: "This is the surgical removal of all or part of the colon." },
+                    { term: "Hepatomegaly", parts: [{ label: "Root", value: "hepat/o", meaning: "liver" }, { label: "Suffix", value: "-megaly", meaning: "enlargement" }], hint: "The suffix '-megaly' means enlargement." },
+                    { term: "Cholecystectomy", parts: [{ label: "Root 1", value: "cholecyst", meaning: "gallbladder" }, { label: "Suffix", value: "-ectomy", meaning: "surgical removal" }], hint: "This procedure involves removing the gallbladder." },
+                    { term: "Proctopexy", parts: [{ label: "Root", value: "proct/o", meaning: "rectum" }, { label: "Suffix", value: "-pexy", meaning: "surgical fixation" }], hint: "The suffix '-pexy' means to surgically fix in place." },
+                    { term: "Gastrostomy", parts: [{ label: "Root", value: "gastr", meaning: "stomach" }, { label: "Suffix", value: "-ostomy", meaning: "surgically creating an opening" }], hint: "This involves creating an external opening into the stomach." },
+                    { term: "Esophagogastroduodenoscopy", parts: [{ label: "Root 1", value: "esophag/o", meaning: "esophagus" }, { label: "Root 2", value: "gastr/o", meaning: "stomach" }, { label: "Root 3", value: "duoden/o", meaning: "duodenum" }, { label: "Suffix", value: "-scopy", meaning: "visual examination" }], hint: "This is a type of endoscopy." },
+                    { term: "Hematemesis", parts: [{ label: "Root", value: "hemat", meaning: "blood" }, { label: "Suffix", value: "-emesis", meaning: "vomiting" }], hint: "The suffix '-emesis' means vomiting." },
+                    { term: "Colostomy", parts: [{ label: "Root", value: "col", meaning: "colon" }, { label: "Suffix", value: "-ostomy", meaning: "surgically creating an opening" }], hint: "This creates an opening from the colon to the body surface." },
+                    { term: "Anoscopy", parts: [{ label: "Root", value: "an/o", meaning: "anus" }, { label: "Suffix", value: "-scopy", meaning: "visual examination" }], hint: "A visual examination of the anal canal." },
+                    { term: "Cholangitis", parts: [{ label: "Root", value: "cholang", meaning: "bile duct" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "An acute inflammation of the bile duct." },
+                    { term: "Gastrectomy", parts: [{ label: "Root", value: "gastr", meaning: "stomach" }, { label: "Suffix", value: "-ectomy", meaning: "surgical removal" }], hint: "Surgical removal of all or a part of the stomach." },
+                    { term: "Hepatitis", parts: [{ label: "Root", value: "hepat", meaning: "liver" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "Inflammation of the liver." },
+                    { term: "Ileectomy", parts: [{ label: "Root", value: "ile", meaning: "ileum" }, { label: "Suffix", value: "-ectomy", meaning: "surgical removal" }], hint: "The surgical removal of the ileum." },
+                    { term: "Sigmoidoscopy", parts: [{ label: "Root", value: "sigmoid/o", meaning: "sigmoid colon" }, { label: "Suffix", value: "-scopy", meaning: "visual examination" }], hint: "The endoscopic examination of the interior of the rectum and sigmoid colon." },
+                    { term: "Stomatitis", parts: [{ label: "Root", value: "stomat", meaning: "mouth" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "Inflammation of the mucosa of the mouth." },
+                    { term: "Volvulus", parts: [{ label: "Root", value: "volvul", meaning: "to roll" }, { label: "Suffix", value: "-us", meaning: "thing" }], hint: "The twisting of the intestine on itself, causing an obstruction." },
+                    { term: "Xerostomia", parts: [{ label: "Root", value: "xer/o", meaning: "dry" }, { label: "Root 2", value: "stom", meaning: "mouth" }, { label: "Suffix", value: "-ia", meaning: "condition" }], hint: "Also known as dry mouth." },
+                    { term: "Gingivitis", parts: [{ label: "Root", value: "gingiv", meaning: "gums" }, { label: "Suffix", value: "-itis", meaning: "inflammation" }], hint: "The earliest stage of periodontal disease." },
+                ]},
+                { id: 'build-a-word', title: 'Build-a-Word', type: 'build', instructions: 'Drag the word parts from the bank to build the term that matches the definition.', questions: [
+                    { definition: "Surgical removal of the gallbladder.", parts: ["cholecyst", "-ectomy"], foils: ["-otomy", "cholang/o"], hint: "What's the root for gallbladder?" },
+                    { definition: "Inflammation of the stomach and small intestine.", parts: ["gastr/o", "enter/o", "-itis"], foils: ["col/o", "-ostomy"], hint: "Combine roots for stomach and small intestine." },
+                    { definition: "The visual examination of the esophagus, stomach, and duodenum.", parts: ["esophag/o", "gastr/o", "duoden/o", "-scopy"], foils: ["-graphy", "an/o"], hint: "This is a very long word made of four parts." },
+                    { definition: "Enlargement of the liver.", parts: ["hepat/o", "-megaly"], foils: ["-malacia", "nephr/o"], hint: "What suffix means enlargement?" },
+                    { definition: "Surgical fixation of the rectum.", parts: ["proct/o", "-pexy"], foils: ["-plasty", "rect/o"], hint: "The suffix '-pexy' means surgical fixation." },
+                    { definition: "Vomiting blood.", parts: ["hemat", "-emesis"], foils: ["-phagia", "hem/o"], hint: "What's the suffix for vomiting?"},
+                    { definition: "Inflammation of the gums.", parts: ["gingiv", "-itis"], foils: ["gloss/o", "-algia"], hint: "What is the root for gums?"},
+                    { definition: "Surgical creation of an opening in the colon.", parts: ["col", "-ostomy"], foils: ["-otomy", "cyst/o"], hint: "Look for the suffix meaning 'surgically creating an opening'."},
+                    { definition: "Difficult swallowing.", parts: ["dys-", "-phagia"], foils: ["-phasia", "a-"], hint: "The suffix for swallowing is '-phagia'."},
+                    { definition: "Inflammation of the liver.", parts: ["hepat", "-itis"], foils: ["-osis", "gastr/o"], hint: "The root for liver is 'hepat/o'."},
+                    { definition: "Visual examination of the anal canal.", parts: ["an/o", "-scopy"], foils: ["-graphy", "proct/o"], hint: "The suffix '-scopy' means visual examination."},
+                    { definition: "Inflammation of a bile duct.", parts: ["cholang", "-itis"], foils: ["chole", "-lithiasis"], hint: "The root for bile duct is 'cholang'."},
+                    { definition: "Dry mouth.", parts: ["xer/o", "stom", "-ia"], foils: ["-osis", "or/o"], hint: "The combining form for dry is 'xer/o'."},
+                    { definition: "Surgical removal of the ileum.", parts: ["ile", "-ectomy"], foils: ["-ostomy", "jejun/o"], hint: "The last part of the small intestine."},
+                    { definition: "Surgical incision into the common bile duct to remove a stone.", parts: ["choledoch/o", "lith", "-otomy"], foils: ["-ectomy", "cholecyst"], hint: "This word has three parts."},
+                    { definition: "Relating to the mouth.", parts: ["or", "-al"], foils: ["-ic", "stomat/o"], hint: "A simple term."},
+                    { definition: "Pain in the stomach.", parts: ["gastr", "-algia"], foils: ["-dynia", "enter/o"], hint: "'-algia' is a suffix for pain."},
+                    { definition: "Surgical repair of the rectum.", parts: ["proct/o", "-plasty"], foils: ["-pexy", "an/o"], hint: "'-plasty' means surgical repair."},
+                    { definition: "An instrument for examining the inside of the rectum.", parts: ["proct/o", "-scope"], foils: ["-scopy", "sigmoid/o"], hint: "An instrument for viewing."},
+                    { definition: "Abnormal softening of the liver.", parts: ["hepat/o", "-malacia"], foils: ["-megaly", "-sclerosis"], hint: "'-malacia' means abnormal softening."}
+                ]},
+                { id: 'mix-match', title: 'Mix and Match', type: 'match', instructions: 'Drag the definition from the bank to the correct medical term.', questions: [
+                    { pairs: [ { term: "Mastication", definition: "The process of chewing." }, { term: "Peristalsis", definition: "Wave-like contractions that move food through the GI tract." }, { term: "Cholelithiasis", definition: "The presence of gallstones." }, { term: "Cirrhosis", definition: "A progressive degenerative disease of the liver." }, { term: "Dyspepsia", definition: "Pain or discomfort in digestion; indigestion." } ], hint: "Focus on processes and conditions." },
+                    { pairs: [ { term: "Emesis", definition: "The reflex ejection of the stomach contents; vomiting." }, { term: "Bariatric Surgery", definition: "Surgery performed to treat morbid obesity." }, { term: "Anastomosis", definition: "A surgical connection between two hollow structures." }, { term: "Ileus", definition: "The partial or complete blockage of the small or large intestine." }, { term: "Jaundice", definition: "Yellow discoloration of the skin and eyes caused by high bilirubin." } ], hint: "These terms relate to symptoms and surgical procedures." },
+                    { pairs: [ { term: "Diverticulitis", definition: "Inflammation of small pouches in the lining of the colon." }, { term: "Volvulus", definition: "Twisting of the intestine on itself." }, { term: "Ascites", definition: "Abnormal accumulation of fluid in the peritoneal cavity." }, { term: "Bruxism", definition: "Involuntary grinding or clenching of the teeth." }, { term: "Cachexia", definition: "Physical wasting away due to loss of weight and muscle mass." } ], hint: "These are specific conditions and symptoms." },
+                    { pairs: [ { term: "Halitosis", definition: "An unpleasant odor coming from the mouth (bad breath)." }, { term: "Melena", definition: "The passage of black, tarry, and foul-smelling stools." }, { term: "Regurgitation", definition: "The return of swallowed food into the mouth." }, { term: "Steatorrhea", definition: "The presence of excess fat in the stool." }, { term: "Antiemetic", definition: "A medication administered to prevent nausea and vomiting." } ], hint: "Focus on symptoms and a type of medication." }
+                ]},
+                 { id: 'story', title: 'Complete the Story', type: 'story', instructions: 'Fill in the blanks to complete the patient case study.', questions: [
+                    {
+                        title: "Case File #1: Abdominal Pain",
+                        sentences: [
+                            { text: "A 19-year-old male presents with pain that began around his navel, a region known as " }, { blank: "periumbilical", hint: "Term for 'around the navel'." },
+                            { text: ". The pain later moved to the right lower quadrant. Due to the inflammation of the appendix, a condition called " }, { blank: "appendicitis", hint: "Inflammation of the appendix." },
+                            { text: ", the surgeon performs an " }, { blank: "appendectomy", hint: "Surgical removal of the appendix." }, { text: "." }
+                        ]
+                    },
+                    {
+                        title: "Case File #2: Heartburn History",
+                        sentences: [
+                            { text: "A 55-year-old has a history of a burning sensation in the chest after eating, medically termed " }, { blank: "pyrosis", hint: "Also known as heartburn." },
+                            { text: ". This is a symptom of " }, { blank: "GERD", hint: "Abbreviation for gastroesophageal reflux disease." },
+                            { text: ", which is the upward flow of acid into the esophagus. A visual examination, or " }, { blank: "esophagogastroduodenoscopy", hint: "Often abbreviated as EGD." }, { text: ", is ordered." }
+                        ]
+                    },
+                    {
+                        title: "Case File #3: Gallbladder Issues",
+                        sentences: [
+                            { text: "A patient experiences pain after fatty meals. An ultrasound reveals " }, { blank: "cholelithiasis", hint: "The presence of gallstones." },
+                            { text: ", which is the presence of gallstones. This has led to inflammation of the gallbladder, known as " }, { blank: "cholecystitis", hint: "Inflammation of the gallbladder." },
+                            { text: ". The recommended treatment is the surgical removal of the gallbladder, a procedure called " }, { blank: "cholecystectomy", hint: "Surgical removal of the gallbladder." }, { text: "." }
+                        ]
+                    },
+                    {
+                        title: "Case File #4: Liver Disease",
+                        sentences: [
+                            { text: "A patient with a history of alcohol abuse shows yellowing of the skin, or " }, { blank: "jaundice", hint: "Yellow discoloration of the skin." },
+                            { text: ". Examination reveals an abnormal enlargement of the liver, which is called " }, { blank: "hepatomegaly", hint: "Enlargement of the liver." },
+                            { text: ". This is due to a progressive degenerative disease of the liver known as " }, { blank: "cirrhosis", hint: "Often caused by alcohol abuse." }, { text: "." }
+                        ]
+                    },
+                    {
+                        title: "Case File #5: Bowel Obstruction",
+                        sentences: [
+                            { text: "An elderly patient presents with a severe blockage of the intestine, a condition called " }, { blank: "ileus", hint: "Blockage of the intestine." },
+                            { text: ". This was caused by the twisting of the intestine on itself, known as a " }, { blank: "volvulus", hint: "Twisting of the intestine." },
+                            { text: ". To fix this, the surgeon creates a new connection between two parts of the intestine, a procedure called an " }, { blank: "anastomosis", hint: "Surgical connection between two structures." }, { text: "." }
+                        ]
+                    },
+                    {
+                        title: "Case File #6: Colon Issues",
+                        sentences: [
+                            { text: "A patient reports finding blood in their stool. A visual examination of the sigmoid colon, called a " }, { blank: "sigmoidoscopy", hint: "Visual examination of the sigmoid colon." },
+                            { text: ", reveals the presence of small pouches in the colon wall. Inflammation of these pouches is called " }, { blank: "diverticulitis", hint: "Inflammation of diverticula." },
+                            { text: ". To manage the condition, a new opening is surgically created from the colon to the body surface, known as a " }, { blank: "colostomy", hint: "Surgical opening in the colon." }, { text: "." }
+                        ]
+                    },
+                    {
+                        title: "Case File #7: Mouth and Throat",
+                        sentences: [
+                            { text: "A patient complains of difficulty swallowing, a condition known as " }, { blank: "dysphagia", hint: "Difficult swallowing." },
+                            { text: ". They also have bad breath, or " }, { blank: "halitosis", hint: "Bad breath." },
+                            { text: ", and an examination shows inflammation of the gums, which is called " }, { blank: "gingivitis", hint: "Inflammation of the gums." }, { text: "." }
+                        ]
+                    }
+                ]},
+                { id: 'true-false', title: 'True or False', type: 'choice', questions: [
+                    { question: "The uvula is the tissue that hangs from the soft palate and helps with speech.", answer: "True", explanation: "The uvula has a role in speech and preventing food from entering the nasal passages.", hint: "It's the dangling tissue at the back of your mouth." },
+                    { question: "The small intestine is shorter than the large intestine.", answer: "False", explanation: "The small intestine is much longer (about 20 feet) but has a smaller diameter than the large intestine.", hint: "Don't be fooled by the names 'small' and 'large'!" },
+                    { question: "Borborygmus is the medical term for the rumbling noise caused by the movement of gas in the intestine.", answer: "True", explanation: "This is the official term for what's commonly called stomach 'growling'.", hint: "It's a fun word for a common sound." },
+                    { question: "A gastrostomy tube is placed through the nose into the stomach.", answer: "False", explanation: "A gastrostomy tube is placed directly through the abdominal wall into the stomach. A nasogastric tube goes through the nose.", hint: "Consider the combining form 'gastr/o'." },
+                    { question: "Crohn's disease is an autoimmune disorder that can affect any part of the GI tract.", answer: "True", explanation: "Crohn's disease causes chronic inflammation and can occur anywhere from the mouth to the anus.", hint: "This is a type of inflammatory bowel disease (IBD)." },
+                    { question: "The pyloric sphincter is located between the esophagus and the stomach.", answer: "False", explanation: "The pyloric sphincter is at the bottom of the stomach, connecting to the small intestine. The lower esophageal sphincter is between the esophagus and stomach.", hint: "Think about the 'exit' of the stomach." },
+                    { question: "The liver produces bile, which is stored in the pancreas.", answer: "False", explanation: "The liver produces bile, but it is stored in the gallbladder.", hint: "The gallbladder's main function is storage." },
+                    { question: "The three parts of the small intestine, in order, are the duodenum, ileum, and jejunum.", answer: "False", explanation: "The correct order is Duodenum, Jejunum, and Ileum.", hint: "Remember the acronym DJI." },
+                    { question: "Ascites is an abnormal accumulation of fluid in the peritoneal cavity.", answer: "True", explanation: "This condition is often associated with severe liver disease.", hint: "This causes abdominal swelling." },
+                    { question: "A proctologist specializes in disorders of the liver.", answer: "False", explanation: "A proctologist specializes in disorders of the colon, rectum, and anus. A hepatologist specializes in the liver.", hint: "'Proct/o' refers to the rectum." },
+                    { question: "Melena is the passage of black, tarry, and foul-smelling stools.", answer: "True", explanation: "This is caused by the presence of digested blood in the stools.", hint: "It indicates bleeding in the upper GI tract." },
+                    { question: "Halitosis is the medical term for bad breath.", answer: "True", explanation: "It can be caused by dental diseases or respiratory or gastric disorders.", hint: "Think about mouthwash commercials." },
+                    { question: "A colostomy is the surgical removal of the colon.", answer: "False", explanation: "A colostomy is the surgical creation of an artificial opening between the colon and the body surface. A colectomy is the removal.", hint: "'-ostomy' means creating an opening." },
+                    { question: "An antiemetic is a medication administered to prevent or relieve nausea and vomiting.", answer: "True", explanation: "These medications are used to treat motion sickness and the side effects of other drugs.", hint: "Remember that '-emesis' means vomiting." },
+                    { question: "Cachexia is a condition of physical wasting away due to the loss of weight and muscle mass.", answer: "True", explanation: "This condition is often seen in patients with advanced cancer or AIDS.", hint: "This is a severe form of malnutrition." },
+                    { question: "Anastomosis is the surgical removal of a body part.", answer: "False", explanation: "Anastomosis is a surgical connection between two hollow or tubular structures.", hint: "Think 'connecting' not 'removing'." },
+                    { question: "Regurgitation is the return of swallowed food into the mouth.", answer: "True", explanation: "Unlike vomiting, it is not a forceful ejection.", hint: "This is a passive process." },
+                    { question: "Stomatitis is inflammation of the stomach.", answer: "False", explanation: "Stomatitis is inflammation of the mouth. Gastritis is inflammation of the stomach.", hint: "'Stomat/o' is the combining form for mouth." },
+                    { question: "The sigmoid colon is the S-shaped structure that continues from the descending colon and joins with the rectum.", answer: "True", explanation: "It is the fourth and last part of the large intestine.", hint: "The name 'sigmoid' means S-shaped." },
+                    { question: "Cholecystitis is the presence of gallstones in the gallbladder.", answer: "False", explanation: "Cholecystitis is inflammation of the gallbladder. Cholelithiasis is the presence of gallstones.", hint: "Remember that '-itis' means inflammation." },
+                ]},
+                { id: 'fill-blank', title: 'Fill in the Blank', type: 'fill', questions: [
+                    { sentence: "The last and longest portion of the small intestine is the __.", answer: "ileum", hint: "It follows the duodenum and jejunum." },
+                    { sentence: "The medical term for the involuntary grinding or clenching of the teeth is __.", answer: "bruxism", hint: "This often occurs during sleep." },
+                    { sentence: "A __ is a physician who specializes in disorders of the colon, rectum, and anus.", answer: "proctologist", hint: "The combining form 'proct/o' means rectum." },
+                    { sentence: "The surgical removal of the appendix is known as an __.", answer: "appendectomy", hint: "This is a common emergency surgery." },
+                    { sentence: "The wavelike muscular contractions that move food through the digestive tract are called __.", answer: "peristalsis", hint: "This process is involuntary." },
+                    { sentence: "A __ tube is a feeding tube placed through the nose into the stomach.", answer: "nasogastric", hint: "NG tube for short." },
+                    { sentence: "The medical term for vomiting is __.", answer: "emesis", hint: "An antiemetic is used to prevent this." },
+                    { sentence: "__ is the examination of the esophagus, stomach, and duodenum with a flexible tube.", answer: "Esophagogastroduodenoscopy", hint: "It's a very long term, often abbreviated as EGD." },
+                    { sentence: "The condition of having an enlarged liver is called __.", answer: "hepatomegaly", hint: "'-megaly' means enlargement." },
+                    { sentence: "A __ is the surgical creation of an artificial opening into the stomach.", answer: "gastrostomy", hint: "This can be used for long-term tube feeding." },
+                    { sentence: "The term __ means the breaking down of body cells or substances.", answer: "catabolism", hint: "The opposite of anabolism." },
+                    { sentence: "A __ is a medication used to treat constipation.", answer: "laxative", hint: "It stimulates bowel movements." },
+                    { sentence: "The __ is the first part of the large intestine.", answer: "cecum", hint: "The appendix hangs from it." },
+                    { sentence: "The term for 'without teeth' is __.", answer: "edentulous", hint: "This describes someone who has lost all their natural teeth." },
+                    { sentence: "A __ ulcer is a sore that develops on the lining of the esophagus, stomach, or small intestine.", answer: "peptic", hint: "Often caused by H. pylori bacteria or NSAID use." },
+                    { sentence: "The surgical removal of the gallbladder is a __.", answer: "cholecystectomy", hint: "A very common surgical procedure." },
+                    { sentence: "Inflammation of the pancreas is known as __.", answer: "pancreatitis", hint: "Can be acute or chronic." },
+                    { sentence: "__ are medications that neutralize stomach acid.", answer: "antacids", hint: "Common over-the-counter treatment for heartburn." },
+                    { sentence: "The surgical fixation of a prolapsed rectum to an adjacent tissue is a __.", answer: "proctopexy", hint: "'-pexy' means surgical fixation." },
+                    { sentence: "The final portion of the large intestine, which terminates at the anus, is the __.", answer: "rectum", hint: "It stores feces before defecation." }
+                ]},
+                { id: 'case-progression', title: 'Patient Case File', type: 'progression', instructions: 'Read the patient case file and answer the questions to reveal the diagnosis.', questions: [
+                    { title: "Case File #1: The Burning Chest", steps: [
+                        { text: "A 55-year-old male presents with a 'burning pain' in his chest that occurs after eating. It's worse at night.", question: { prompt: "What is the medical term for this 'burning pain' sensation?", options: ["Dyspepsia", "Pyrosis", "Emesis", "Anorexia"], answer: "Pyrosis", explanation: "Pyrosis, also known as heartburn, is the burning sensation caused by the return of acidic stomach contents into the esophagus." }},
+                        { text: "The patient mentions this has been happening for months. He often wakes up with a sour taste in his mouth.", question: { prompt: "The ring-like muscle that should prevent this is the:", options: ["Pyloric Sphincter", "Anal Sphincter", "Lower Esophageal Sphincter", "Upper Esophageal Sphincter"], answer: "Lower Esophageal Sphincter", explanation: "The Lower Esophageal Sphincter (LES) is supposed to prevent stomach contents from flowing back into the esophagus." }},
+                        { text: "Final Diagnosis: Based on the recurrent pyrosis and likely issue with the LES, the diagnosis is made.", question: { prompt: "What is the final diagnosis?", options: ["Gastritis", "Gastroesophageal Reflux Disease (GERD)", "Peptic Ulcer", "Esophageal Varices"], answer: "Gastroesophageal Reflux Disease (GERD)", explanation: "GERD is the upward flow of acid from the stomach into the esophagus, causing chronic symptoms." }}
+                    ]},
+                    { title: "Case File #2: The Sudden Pain", steps: [
+                        { text: "A 45-year-old female presents to the ER with severe, sharp pain in her upper right abdomen that started after a large, fatty meal.", question: { prompt: "Pain in this area points to a problem with which accessory organs of digestion?", options: ["Spleen and Stomach", "Liver and Gallbladder", "Pancreas and Jejunum", "Appendix and Cecum"], answer: "Liver and Gallbladder", explanation: "The liver and gallbladder are located in the upper right quadrant of the abdomen." }},
+                        { text: "An ultrasound is performed and reveals the presence of stones in the gallbladder.", question: { prompt: "What is the medical term for the presence of gallstones?", options: ["Cholecystitis", "Cholangitis", "Cholelithiasis", "Hepatitis"], answer: "Cholelithiasis", explanation: "Cholelithiasis (chole = bile, lith = stone, -iasis = abnormal condition) is the presence of gallstones." }},
+                        { text: "Final Diagnosis: The patient's symptoms and the ultrasound results confirm the diagnosis.", question: { prompt: "What is the final diagnosis?", options: ["Pancreatitis", "Cholelithiasis", "Gastric Ulcer", "Cirrhosis"], answer: "Cholelithiasis", explanation: "The combination of RUQ pain after fatty meals and gallstones on ultrasound confirms cholelithiasis." }}
+                    ]},
+                     { title: "Case File #3: The Migrating Pain", steps: [
+                        { text: "A 19-year-old male complains of a dull pain that started around his navel.", question: { prompt: "Which term describes the area 'around the navel'?", options: ["Epigastric", "Hypogastric", "Periumbilical", "Suprapubic"], answer: "Periumbilical", explanation: "The term 'periumbilical' refers to the region around or near the umbilicus (navel)." }},
+                        { text: "Over the past 12 hours, the pain has sharpened and moved to the right lower quadrant (RLQ) of his abdomen. He has a low-grade fever and nausea.", question: { prompt: "This classic migration of pain is a hallmark sign for inflammation of which organ?", options: ["Gallbladder", "Spleen", "Appendix", "Sigmoid Colon"], answer: "Appendix", explanation: "The migration of pain from the periumbilical region to the RLQ is a classic sign of appendicitis." }},
+                        { text: "Final Diagnosis: The patient's symptoms are highly indicative of a specific acute condition requiring surgery.", question: { prompt: "What is the most likely diagnosis?", options: ["Appendicitis", "Diverticulitis", "Gastritis", "Pancreatitis"], answer: "Appendicitis", explanation: "The combination of migrating pain, RLQ tenderness, fever, and nausea strongly suggests appendicitis." }}
+                    ]},
+                     { title: "Case File #4: Liver Disease", steps: [
+                        { text: "A 60-year-old male with a history of chronic alcohol abuse presents with yellowing of his skin and eyes.", question: { prompt: "What is the medical term for this yellow discoloration?", options: ["Cyanosis", "Erythema", "Jaundice", "Pallor"], answer: "Jaundice", explanation: "Jaundice (icterus) is a yellow discoloration of the skin, mucous membranes, and the eyes caused by high levels of bilirubin." }},
+                        { text: "A physical exam reveals an enlarged liver and an abnormal accumulation of fluid in the peritoneal cavity.", question: { prompt: "What are the medical terms for an enlarged liver and this fluid accumulation?", options: ["Hepatitis and Edema", "Hepatomegaly and Ascites", "Splenomegaly and Ileus", "Hepatoma and Emesis"], answer: "Hepatomegaly and Ascites", explanation: "Hepatomegaly is liver enlargement, and ascites is fluid in the abdomen." }},
+                        { text: "Final Diagnosis: The patient's history and symptoms point to a chronic, degenerative liver condition.", question: { prompt: "What is the most likely diagnosis?", options: ["Cholecystitis", "Cirrhosis", "Hepatitis A", "Pancreatitis"], answer: "Cirrhosis", explanation: "Cirrhosis is a progressive degenerative disease of the liver often caused by chronic alcohol abuse or viral hepatitis B or C." }}
+                    ]},
+                    { title: "Case File #5: Bowel Obstruction", steps: [
+                        { text: "An 80-year-old female is admitted with severe abdominal pain, bloating, and vomiting. She has not had a bowel movement in three days.", question: { prompt: "The inability to pass stool or gas suggests what general condition?", options: ["Diarrhea", "Dyspepsia", "Bowel Obstruction", "Incontinence"], answer: "Bowel Obstruction", explanation: "A bowel obstruction prevents the normal passage of intestinal contents." }},
+                        { text: "An abdominal x-ray reveals a section of the intestine has twisted on itself.", question: { prompt: "What is the term for the twisting of the intestine on itself?", options: ["Intussusception", "Volvulus", "Hernia", "Adhesion"], answer: "Volvulus", explanation: "A volvulus is the twisting of the intestine, which causes an obstruction." }},
+                        { text: "Final Diagnosis: The patient is taken to surgery to correct the twisted bowel.", question: { prompt: "What is the final diagnosis?", options: ["Ileus", "Volvulus", "Crohn's Disease", "Diverticulitis"], answer: "Volvulus", explanation: "The twisting seen on the x-ray combined with obstructive symptoms confirms a volvulus." }}
+                    ]},
+                     { title: "Case File #6: Lower GI Bleed", steps: [
+                        { text: "A 65-year-old patient reports seeing bright red blood in his stool.", question: { prompt: "What is the medical term for the passage of fresh, bright red blood in the stool?", options: ["Melena", "Hematochezia", "Steatorrhea", "Hematemesis"], answer: "Hematochezia", explanation: "Hematochezia is the passage of fresh blood through the anus, usually in or with stools. Melena refers to dark, tarry stools." }},
+                        { text: "A colonoscopy is performed, which reveals the presence of numerous small pouches in the colon lining.", question: { prompt: "What is the condition of having these pouches called?", options: ["Polyposis", "Diverticulosis", "Colitis", "Proctitis"], answer: "Diverticulosis", explanation: "Diverticulosis is the chronic presence of abnormal numbers of diverticula (pouches) in the colon." }},
+                        { text: "Final Diagnosis: The patient's bleeding is attributed to inflammation of one of these pouches.", question: { prompt: "What is the diagnosis for the inflamed pouches?", options: ["Diverticulitis", "Crohn's Disease", "Ulcerative Colitis", "Irritable Bowel Syndrome"], answer: "Diverticulitis", explanation: "Diverticulitis is the inflammation or infection of one or more diverticulum in the colon." }}
+                    ]},
+                     { title: "Case File #7: Gnawing Pain", steps: [
+                        { text: "A 40-year-old reports a gnawing, burning pain in the stomach between meals that improves after eating.", question: { prompt: "This pattern of pain is characteristic of what condition?", options: ["GERD", "Gastritis", "Peptic Ulcer", "Cholelithiasis"], answer: "Peptic Ulcer", explanation: "Pain from peptic ulcers often occurs when the stomach is empty and is temporarily relieved by eating." }},
+                        { text: "The patient admits to long-term use of NSAIDs for arthritis. A test for H. pylori bacteria comes back positive.", question: { prompt: "Both NSAID use and H. pylori are major risk factors for what?", options: ["Developing polyps", "Forming ulcers", "Liver damage", "Gallstones"], answer: "Forming ulcers", explanation: "Helicobacter pylori bacteria and nonsteroidal anti-inflammatory drugs are common causes of peptic ulcers." }},
+                        { text: "Final Diagnosis: An EGD confirms a sore on the lining of the stomach.", question: { prompt: "What is the final diagnosis?", options: ["Gastric Cancer", "Esophageal Varices", "Peptic Ulcer", "Gastritis"], answer: "Peptic Ulcer", explanation: "The symptoms, risk factors, and endoscopic findings all confirm the diagnosis of a peptic ulcer." }}
+                    ]}
+                ]}
+            ]
+        };
+
+        let state = {};
+        
+        function initializeGame() {
+            state = {
+                currentActivityIndex: null,
+                scores: {},
+                attempted: {},
+                completed: {},
+                activityStartTimes: {},
+                isPaused: false,
+                startTime: null,
+                endTime: null,
+            };
+            renderMenu();
+        }
+
+        const app = document.getElementById('app');
+
+        function readAloud(textToSpeak) {
+            if ('speechSynthesis' in window && !state.isPaused) {
+                const utterance = new SpeechSynthesisUtterance(textToSpeak); utterance.lang = 'en-US';
+                window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
+            } else if (!('speechSynthesis' in window)) {
+                alert('Sorry, your browser does not support text-to-speech.');
+            }
+        }
+        
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            document.getElementById('pause-overlay').style.display = state.isPaused ? 'flex' : 'none';
+        }
+
+        function endGame() {
+            if (state.startTime && !state.endTime) state.endTime = new Date();
+            renderResultsPage();
+        }
+        
+        function returnToMenu() {
+            renderMenu();
+        }
+
+        function renderMenu() {
+            const menuContainer = document.createElement('div');
+            menuContainer.className = "min-h-screen flex flex-col justify-center";
+            const menuHtml = `
+                <div class="text-center mb-10 fade-in">
+                    <div class="flex items-center justify-center gap-4">
+                        <div>
+                            <h1 class="text-5xl font-extrabold text-slate-800 tracking-tight">Digestive System</h1>
+                            <p class="text-slate-500 mt-1 text-lg font-medium">Week 8: Medical Terminology Game</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${gameData.activities.map((activity, index) => {
+                        const attempted = state.attempted ? (state.attempted[activity.id] || 0) : 0;
+                        const score = state.scores ? (state.scores[activity.id] || 0) : 0;
+                        let total;
+                        if (activity.type === 'match') total = activity.questions.reduce((sum, q) => sum + q.pairs.length, 0);
+                        else if (activity.type === 'progression') total = activity.questions.reduce((sum, q) => sum + q.steps.length, 0);
+                        else if (activity.type === 'story') total = activity.questions.reduce((sum, q) => sum + q.sentences.filter(s => s.blank).length, 0);
+                        else total = activity.questions.length;
+                        
+                        const isCompleted = attempted >= total && total > 0;
+                        if(isCompleted) state.completed[activity.id] = true;
+
+                        let statusText = 'Not Started';
+                        if (attempted > 0) {
+                             statusText = isCompleted ? `Completed: ${score}/${attempted}` : `In Progress: ${score}/${attempted}`;
+                        }
+                        return `<div class="content-card menu-card p-6 rounded-2xl shadow-lg cursor-pointer flex flex-col justify-between fade-in" style="animation-delay: ${100 + index * 100}ms" onclick="startActivity(${index})">
+                            <h2 class="text-xl font-bold text-slate-900">${activity.title}</h2>
+                            <div class="mt-4 text-right">
+                                <span class="text-sm font-semibold ${attempted > 0 ? 'text-sky-600' : 'text-slate-400'}">${statusText}</span>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                ${state.startTime ? `<div class="mt-8 text-center fade-in" style="animation-delay: 700ms"><button onclick="endGame()" class="btn-secondary font-bold py-2 px-6">End Game & See Results</button></div>` : ''}
+            `;
+            menuContainer.innerHTML = menuHtml;
+            app.innerHTML = '';
+            app.appendChild(menuContainer);
+            app.classList.add('justify-center');
+        }
+
+        function renderProgressBar(activity, questionIndex) {
+            const isMatch = activity.type === 'match';
+            const isProgression = activity.type === 'progression';
+            const isStory = activity.type === 'story';
+            let total;
+            if (isMatch) total = activity.questions.length * 5;
+            else if (isProgression) total = activity.questions.reduce((sum, q) => sum + q.steps.length, 0);
+            else if (isStory) total = activity.questions.reduce((sum, q) => sum + q.sentences.filter(s => s.blank).length, 0);
+            else total = activity.questions.length;
+            
+            const attempted = (state.attempted[activity.id] || 0);
+            const percentage = total > 0 ? (attempted / total) * 100 : 0;
+            
+            let progressText = `Question ${questionIndex + 1}/${activity.questions.length}`;
+            if(isMatch) progressText = `Set ${questionIndex + 1}/${activity.questions.length}`;
+            else if(isProgression || isStory) {
+                 progressText = `Story ${questionIndex + 1}/${activity.questions.length}`;
+            }
+
+            return `
+                <div class="mb-4">
+                     <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-semibold text-sky-800">${progressText}</span>
+                     </div>
+                    <div class="w-full bg-slate-200/70 rounded-full h-2.5">
+                        <div class="progress-bar-segment bg-gradient-to-r from-sky-400 to-cyan-400 h-2.5 rounded-full" style="width: ${percentage}%"></div>
+                    </div>
+                </div>`;
+        }
+        
+        function updateProgressBar(activity, questionIndex, itemsAnswered = 1) {
+            const isMatch = activity.type === 'match';
+            const isProgression = activity.type === 'progression';
+            const isStory = activity.type === 'story';
+            let total;
+            if (isMatch) total = activity.questions.length * 5;
+            else if (isProgression) total = activity.questions.reduce((sum, q) => sum + q.steps.length, 0);
+            else if (isStory) total = activity.questions.reduce((sum, q) => sum + q.sentences.filter(s => s.blank).length, 0);
+            else total = activity.questions.length;
+
+            const attempted = (state.attempted[activity.id] || 0);
+            const percentage = total > 0 ? (attempted / total) * 100 : 0;
+            const bar = document.querySelector('.progress-bar-segment');
+            if(bar) bar.style.width = `${percentage}%`;
+        }
+
+        function renderActivityShell(activity, content, questionIndex, stepIndex = 0) {
+            let hintText = '';
+            const question = activity.questions ? activity.questions[questionIndex] : null;
+            if (activity.type === 'progression' && question && question.steps) {
+                const step = question.steps[stepIndex];
+                if (step && step.question && step.question.hint) hintText = step.question.hint;
+            } else if(activity.type === 'story' && question) {
+                // Hint logic for story is inside the render function
+            } else if (question && question.hint) {
+                hintText = question.hint;
+            }
+            
+            const hintButton = hintText ? `<button id="hint-btn" onclick="showHint('${hintText.replace(/'/g, "\\'")}')" class="btn-secondary text-sm font-semibold py-1 px-3">Hint</button>` : '';
+            return `
+                <div class="fade-in w-full my-auto">
+                ${renderProgressBar(activity, questionIndex)}
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <button onclick="returnToMenu()" class="btn-secondary text-sm font-semibold py-2 px-4" aria-label="Back to Menu">Menu</button>
+                        <button onclick="endGame()" class="ml-2 btn-secondary btn-exit text-sm font-semibold py-2 px-4" aria-label="End Game">Exit</button>
+                    </div>
+                    <div class="flex items-center gap-4">${hintButton}<button onclick="togglePause()" class="icon-btn" aria-label="Pause Game"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></button></div>
+                </div>
+                <div class="text-center mb-4">
+                    <h1 class="text-3xl font-bold text-slate-800">${activity.title}</h1>
+                </div>
+                <div class="content-card p-8 rounded-3xl shadow-xl">
+                    ${activity.instructions ? `<p class="text-center text-slate-500 mb-6">${activity.instructions}</p>` : ''}
+                    ${content}
+                </div>
+                </div>`;
+        }
+        
+        function showHint(hintText, blankIndex = -1) {
+             if (blankIndex !== -1) {
+                const hintContainer = document.querySelector(`#hint-container-${blankIndex}`);
+                if (hintContainer) {
+                    hintContainer.innerHTML = `<span class="text-xs text-sky-600">${hintText}</span>`;
+                }
+            } else {
+                const hintContainer = document.getElementById('hint-container');
+                if (hintContainer) {
+                    hintContainer.innerHTML = `<div class="mt-4 p-3 bg-sky-50 border border-sky-200 text-sky-800 rounded-lg text-center text-sm fade-in">${hintText}</div>`;
+                }
+                document.getElementById('hint-btn')?.setAttribute('disabled', true);
+            }
+        }
+
+        function renderNavigation(activity, isLastInActivity) {
+             const isLastActivity = state.currentActivityIndex === gameData.activities.length - 1;
+             let nextButtonHtml = '';
+             
+             let nextIndex = (activity.currentQuestionIndex || 0) + 1;
+             let nextFunctionCall = '';
+
+             if (activity.type === 'breakdown') nextFunctionCall = `renderBreakdown(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+             if (activity.type === 'build') nextFunctionCall = `renderBuildAWord(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+             if (activity.type === 'match') nextFunctionCall = `renderMatch(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+             if (activity.type === 'choice') nextFunctionCall = `renderChoice(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+             if (activity.type === 'fill') nextFunctionCall = `renderFill(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+             if (activity.type === 'progression') nextFunctionCall = `renderCaseProgression(gameData.activities[${state.currentActivityIndex}], ${activity.caseIndex}, ${nextIndex})`;
+             if (activity.type === 'story') nextFunctionCall = `renderStory(gameData.activities[${state.currentActivityIndex}], ${nextIndex})`;
+             
+             if (isLastActivity && isLastInActivity) {
+                nextButtonHtml = `<button onclick="endGame()" class="btn-primary font-semibold py-3 px-8">See Results</button>`;
+             } else if (isLastInActivity) {
+                 nextButtonHtml = `<button onclick="nextActivity()" class="btn-primary font-semibold py-3 px-8">Next Activity</button>`;
+             } else {
+                 nextButtonHtml = `<button onclick="${nextFunctionCall}" class="btn-primary font-semibold py-3 px-8">Next</button>`;
+             }
+
+            return `<div class="mt-8 flex justify-end fade-in">${nextButtonHtml}</div>`;
+        }
+
+        function enforceCompletion(formId, buttonId) {
+             const form = document.getElementById(formId); const inputs = form.querySelectorAll('input[type="text"]');
+             const submitButton = form.querySelector(`#${buttonId}`);
+             function validateInputs() { submitButton.disabled = ![...inputs].every(input => input.value.trim() !== ''); }
+             inputs.forEach(input => input.addEventListener('input', validateInputs)); validateInputs();
+        }
+
+        function handleAnswer(activity, isCorrect, count = 1) {
+            if (isCorrect) state.scores[activity.id] = (state.scores[activity.id] || 0) + (isCorrect === true ? 1 : isCorrect);
+            state.attempted[activity.id] = (state.attempted[activity.id] || 0) + count;
+            updateProgressBar(activity, activity.currentQuestionIndex, count);
+        }
+
+        function renderBreakdown(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const question = activity.questions[questionIndex];
+            const contentHtml = `<div class="text-center mb-6"><p class="text-lg text-slate-500">Identify the parts for the term:</p><div class="flex justify-center items-center gap-2"><h2 class="text-4xl font-bold text-slate-700 tracking-tight">${question.term}</h2><button onclick="readAloud('${question.term}')" class="icon-btn" aria-label="Read term aloud"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button></div></div><form id="breakdown-form"><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">${question.parts.map((part, index) => `<div class="space-y-2"><label class="font-semibold text-slate-700">${part.label}</label><input type="text" placeholder="Enter Part" data-part-index="${index}" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"><p class="text-sm text-slate-600 p-3 bg-slate-100 rounded-lg text-center">Meaning: <span class="font-semibold">${part.meaning}</span></p></div>`).join('')}</div><div class="flex justify-center"><button type="submit" id="submit-breakdown" class="btn-primary font-bold py-3 px-8">Check Answer</button></div></form><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div id="navigation-container"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            enforceCompletion('breakdown-form', 'submit-breakdown');
+            document.getElementById('breakdown-form').onsubmit = (e) => {
+                e.preventDefault();
+                const form = e.target; form.querySelector('button[type="submit"]').disabled = true; let isCorrect = true;
+                question.parts.forEach((part, index) => { const partInput = form.querySelector(`input[data-part-index="${index}"]`); partInput.readOnly = true; if (partInput.value.trim().toLowerCase() === part.value.toLowerCase()) { partInput.classList.add('bg-green-100', 'border-green-400'); } else { isCorrect = false; partInput.classList.add('bg-red-100', 'border-red-400'); } });
+                handleAnswer(activity, isCorrect);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${!isCorrect ? `<p class="mt-1 text-sm">Correct answers: ${question.parts.map(p => `<strong>${p.value}</strong>`).join(', ')}</p>` : ''}</div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if (isLast) state.completed[activity.id] = true;
+                document.getElementById('navigation-container').innerHTML = renderNavigation(activity, isLast);
+            };
+        }
+
+        function renderBuildAWord(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const question = activity.questions[questionIndex];
+            const allParts = [...question.parts, ...question.foils];
+            const shuffledParts = allParts.sort(() => Math.random() - 0.5);
+            
+            const contentHtml = `
+                <div class="text-center mb-6">
+                    <p class="text-lg text-slate-500">Build the term for:</p>
+                    <p class="text-xl font-semibold text-slate-700">${question.definition}</p>
+                </div>
+                <div id="build-zone" class="flex items-center justify-center gap-2 bg-slate-100 p-4 rounded-lg min-h-[60px] border-2 border-dashed border-slate-300">
+                    <!-- Drop targets will go here -->
+                </div>
+                <div id="answer-bank" class="flex flex-wrap items-center justify-center gap-3 bg-slate-50 p-4 rounded-lg mt-6 min-h-[80px]">
+                    ${shuffledParts.map(part => `<div draggable="true" class="build-item bg-white p-2 px-4 rounded-full shadow cursor-grab active:cursor-grabbing border border-slate-200">${part}</div>`).join('')}
+                </div>
+                <div id="hint-container"></div>
+                <div id="feedback" class="mt-6"></div>
+                <div class="mt-8 flex justify-center">
+                    <button id="check-build" class="btn-primary font-bold py-3 px-8">Check Answer</button>
+                </div>
+                <div id="navigation-container" class="hidden"></div>
+            `;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+
+            let draggedItem = null;
+            document.querySelectorAll('.build-item').forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                });
+                item.addEventListener('dragend', () => {
+                    draggedItem?.classList.remove('dragging');
+                    draggedItem = null;
+                });
+            });
+
+            const dropTargets = [document.getElementById('build-zone'), document.getElementById('answer-bank')];
+            dropTargets.forEach(target => {
+                target.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    target.classList.add('drop-hover');
+                });
+                target.addEventListener('dragleave', () => target.classList.remove('drop-hover'));
+                target.addEventListener('drop', e => {
+                    e.preventDefault();
+                    target.classList.remove('drop-hover');
+                    if (draggedItem) {
+                        target.appendChild(draggedItem);
+                    }
+                });
+            });
+
+            document.getElementById('check-build').addEventListener('click', (e) => {
+                const buildZone = document.getElementById('build-zone');
+                const builtParts = [...buildZone.children].map(el => el.textContent);
+                
+                if (builtParts.length === 0) {
+                    const feedback = document.getElementById('feedback');
+                    feedback.innerHTML = `<div class="fade-in feedback-warning p-4 rounded-lg text-center"><p class="font-bold">Please build the word before checking.</p></div>`;
+                    setTimeout(() => feedback.innerHTML = '', 3000);
+                    return;
+                }
+                
+                e.target.disabled = true;
+
+                const builtWord = builtParts.join('');
+                const correctWord = question.parts.join('');
+                const isCorrect = builtWord === correctWord;
+
+                handleAnswer(activity, isCorrect);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg text-center"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${!isCorrect ? `<p class="mt-1 text-sm">The correct term is <strong>${correctWord.replace(/(\/o|-)/g, '')}</strong>.</p>` : ''}</div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if (isLast) state.completed[activity.id] = true;
+                const navContainer = document.getElementById('navigation-container');
+                navContainer.classList.remove('hidden');
+                navContainer.innerHTML = renderNavigation(activity, isLast);
+            });
+        }
+        
+        function renderMatch(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const question = activity.questions[questionIndex]; const pairs = question.pairs;
+            let shuffledDefinitions = pairs.map(p => p.definition).sort(() => 0.5 - Math.random());
+            const contentHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"><div class="space-y-4">${pairs.map((pair, index) => `<div class="flex items-center gap-4"><div class="w-2/5 font-semibold bg-sky-50 p-4 rounded-lg border border-sky-200">${pair.term}</div><div id="target-${index}" data-term="${pair.term}" class="match-target w-3/5 min-h-[4rem] bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 italic p-2">Drop here</div></div>`).join('')}</div><div id="answer-bank" class="space-y-4 bg-slate-50 p-4 rounded-lg min-h-[20rem]">${shuffledDefinitions.map((def, index) => `<div id="def-${index}" draggable="true" data-definition="${def}" class="match-item bg-white p-3 rounded-lg shadow cursor-grab active:cursor-grabbing border border-slate-200">${def}</div>`).join('')}</div></div><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div class="mt-8 flex justify-center"><button id="check-match" class="btn-primary font-bold py-3 px-8">Check Answers</button></div><div id="navigation-container" class="hidden"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex); 
+            let draggedItem = null;
+            document.querySelectorAll('.match-item').forEach(item => { item.addEventListener('dragstart', (e) => { draggedItem = e.target; setTimeout(() => e.target.classList.add('dragging'), 0); }); item.addEventListener('dragend', () => { draggedItem?.classList.remove('dragging'); draggedItem = null; }); });
+            const allTargets = [...document.querySelectorAll('.match-target'), document.getElementById('answer-bank')];
+            allTargets.forEach(target => { target.addEventListener('dragover', (e) => { e.preventDefault(); target.classList.add('drop-hover'); }); target.addEventListener('dragleave', () => target.classList.remove('drop-hover')); target.addEventListener('drop', (e) => { e.preventDefault(); target.classList.remove('drop-hover'); if (draggedItem) { if (target.children.length > 0 && target.id !== 'answer-bank') document.getElementById('answer-bank').appendChild(target.children[0]); if(target.id !== 'answer-bank') target.innerHTML = ''; target.appendChild(draggedItem); } }); });
+            document.getElementById('check-match').addEventListener('click', (e) => {
+                const dropTargets = document.querySelectorAll('.match-target');
+                const allFilled = [...dropTargets].every(t => t.children.length > 0);
+                if (!allFilled) {
+                    const feedback = document.getElementById('feedback');
+                    feedback.innerHTML = `<div class="fade-in feedback-warning p-4 rounded-lg text-center"><p class="font-bold">Please match a definition to every term.</p></div>`;
+                    setTimeout(() => feedback.innerHTML = '', 3000);
+                    return;
+                }
+                e.target.disabled = true; let correctCount = 0;
+                dropTargets.forEach(target => { const droppedItem = target.querySelector('.match-item'); const correctPair = pairs.find(p => p.term === target.dataset.term); if (droppedItem && droppedItem.dataset.definition === correctPair.definition) { correctCount++; target.classList.remove('border-slate-300', 'border-dashed'); target.classList.add('border-green-500', 'bg-green-50'); } else { target.classList.remove('border-slate-300', 'border-dashed'); target.classList.add('border-red-500', 'bg-red-50'); } });
+                handleAnswer(activity, correctCount, pairs.length);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${correctCount === pairs.length ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg text-center"><p class="font-bold">You got ${correctCount} out of ${pairs.length} correct!</p></div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if (isLast) state.completed[activity.id] = true;
+                const navContainer = document.getElementById('navigation-container'); navContainer.classList.remove('hidden'); navContainer.innerHTML = renderNavigation(activity, isLast);
+            });
+        }
+        
+        function renderChoice(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const questionData = activity.questions[questionIndex]; 
+            const options = questionData.options || ['True', 'False'];
+            const contentHtml = `<div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200"><div class="flex justify-center items-center gap-2"><p class="text-xl text-center font-medium">${questionData.question}</p><button onclick="readAloud('${questionData.question.replace(/'/g, "\\'")}')" class="icon-btn" aria-label="Read question aloud"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button></div></div><div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">${options.map(option => `<button data-answer="${option}" class="text-left p-4 border-2 border-slate-200 rounded-lg hover:bg-sky-50 hover:border-sky-500 transition-all duration-200 font-medium">${option}</button>`).join('')}</div><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div id="navigation-container"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            document.querySelectorAll('#options-container button').forEach(button => {
+                button.onclick = () => {
+                    const isCorrect = button.dataset.answer === questionData.answer;
+                    document.querySelectorAll('#options-container button').forEach(btn => { btn.disabled = true; if(btn.dataset.answer === questionData.answer) btn.classList.add('bg-green-100', 'border-green-500', 'ring-2', 'ring-green-500'); });
+                    if (!isCorrect) button.classList.add('bg-red-100', 'border-red-500');
+                    handleAnswer(activity, isCorrect);
+                    document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${questionData.explanation ? `<p class="mt-1 text-sm">${questionData.explanation}</p>` : ''}</div>`;
+                    const isLast = questionIndex >= activity.questions.length - 1;
+                    if(isLast) state.completed[activity.id] = true;
+                    document.getElementById('navigation-container').innerHTML = renderNavigation(activity, isLast);
+                }
+            });
+        }
+        
+        function renderFill(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex; const question = activity.questions[questionIndex];
+            const sentenceParts = question.sentence.split('__');
+            const contentHtml = `<form id="fill-form"><div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200 text-center text-xl"><label for="blank-input" class="flex justify-center items-center gap-2 flex-wrap"><span>${sentenceParts[0]}</span><input type="text" id="blank-input" class="mx-2 p-2 w-48 text-center border-b-2 border-slate-400 bg-transparent focus:outline-none focus:border-sky-500 font-semibold" autocomplete="off"><span>${sentenceParts[1]}</span><button type="button" onclick="readAloud('${question.sentence.replace('__', 'blank')}')" class="icon-btn" aria-label="Read sentence aloud"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button></label></div><div class="flex justify-center"><button type="submit" id="submit-fill" class="btn-primary font-bold py-3 px-8">Check Answer</button></div></form><div id="hint-container"></div><div id="feedback" class="mt-6"></div><div id="navigation-container"></div>`;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            document.getElementById('blank-input').focus(); enforceCompletion('fill-form', 'submit-fill');
+            document.getElementById('fill-form').onsubmit = (e) => {
+                e.preventDefault(); const form = e.target; const input = form.querySelector('#blank-input');
+                const isCorrect = input.value.trim().toLowerCase() === question.answer.toLowerCase();
+                form.querySelector('button[type="submit"]').disabled = true; input.readOnly = true;
+                if (isCorrect) input.classList.add('border-green-500', 'bg-green-50'); else input.classList.add('border-red-500', 'bg-red-50');
+                handleAnswer(activity, isCorrect);
+                document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p>${!isCorrect ? `<p class="mt-1 text-sm">The correct answer is: <strong>${question.answer}</strong></p>` : ''}</div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if(isLast) state.completed[activity.id] = true;
+                document.getElementById('navigation-container').innerHTML = renderNavigation(activity, isLast);
+            };
+        }
+
+        function renderCaseProgression(activity, caseIndex = 0, stepIndex = 0) {
+            activity.caseIndex = caseIndex;
+            activity.currentQuestionIndex = stepIndex; // Used for progress bar logic
+            const caseData = activity.questions[caseIndex];
+            const stepData = caseData.steps[stepIndex];
+
+            let historyHtml = '';
+            for(let i=0; i < stepIndex; i++) {
+                historyHtml += `<div class="pb-4 border-l-2 border-slate-200 ml-4 pl-8 relative"><div class="absolute -left-[11px] top-0 w-5 h-5 bg-sky-500 rounded-full border-4 border-white"></div><p class="text-slate-500">${caseData.steps[i].text}</p></div>`;
+            }
+
+            const contentHtml = `
+                <div class="mb-6">
+                    ${historyHtml}
+                    <div class="pb-4 border-l-2 border-transparent ml-4 pl-8 relative">
+                        <div class="absolute -left-[11px] top-0 w-5 h-5 bg-sky-500 rounded-full border-4 border-white pulse"></div>
+                        <p class="text-slate-600 font-semibold">${stepData.text}</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200">
+                    <div class="flex justify-center items-center gap-2">
+                        <p class="text-xl text-center font-medium">${stepData.question.prompt}</p>
+                    </div>
+                </div>
+                <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    ${stepData.question.options.map(option => `<button data-answer="${option}" class="text-left p-4 border-2 border-slate-200 rounded-lg hover:bg-sky-50 hover:border-sky-500 transition-all duration-200 font-medium">${option}</button>`).join('')}
+                </div>
+                <div id="feedback" class="mt-6"></div>
+                <div id="navigation-container"></div>
+            `;
+            app.innerHTML = renderActivityShell(activity, contentHtml, caseIndex, stepIndex);
+
+            document.querySelectorAll('#options-container button').forEach(button => {
+                button.onclick = () => {
+                    const isCorrect = button.dataset.answer === stepData.question.answer;
+                    document.querySelectorAll('#options-container button').forEach(btn => {
+                        btn.disabled = true;
+                        if(btn.dataset.answer === stepData.question.answer) btn.classList.add('bg-green-100', 'border-green-500');
+                    });
+                    if (!isCorrect) button.classList.add('bg-red-100', 'border-red-500');
+                    
+                    handleAnswer(activity, isCorrect);
+
+                    document.getElementById('feedback').innerHTML = `<div class="fade-in ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg"><p class="font-bold">${isCorrect ? 'Correct!' : 'Incorrect.'}</p><p class="mt-1 text-sm">${stepData.question.explanation}</p></div>`;
+                    
+                    const isLastStep = stepIndex >= caseData.steps.length - 1;
+                    const isLastCase = caseIndex >= activity.questions.length - 1;
+
+                    if (isLastStep) {
+                        if (isLastCase) {
+                            state.completed[activity.id] = true;
+                             document.getElementById('navigation-container').innerHTML = renderNavigation(activity, true);
+                        } else {
+                             document.getElementById('navigation-container').innerHTML = `<div class="mt-8 flex justify-end fade-in"><button onclick="renderCaseProgression(gameData.activities[${state.currentActivityIndex}], ${caseIndex + 1}, 0)" class="btn-primary font-semibold py-3 px-8">Next Case</button></div>`;
+                        }
+                    } else {
+                        document.getElementById('navigation-container').innerHTML = `<div class="mt-8 flex justify-end fade-in"><button onclick="renderCaseProgression(gameData.activities[${state.currentActivityIndex}], ${caseIndex}, ${stepIndex + 1})" class="btn-primary font-semibold py-3 px-8">Next Step</button></div>`;
+                    }
+                };
+            });
+        }
+        
+        function renderStory(activity, questionIndex = 0) {
+            activity.currentQuestionIndex = questionIndex;
+            const story = activity.questions[questionIndex];
+            let blankIndex = 0;
+
+            const storyHtml = story.sentences.map(part => {
+                if (part.text) {
+                    return `<span>${part.text}</span>`;
+                } else if (part.blank) {
+                    const currentBlankIndex = blankIndex;
+                    const hintButton = part.hint ? `<button type="button" onclick="showHint('${part.hint.replace(/'/g, "\\'")}', ${currentBlankIndex})" class="text-sky-500 font-bold ml-1 absolute right-2 top-1/2 -translate-y-1/2">?</button>` : '';
+                    return `<div class="inline-block relative"><input type="text" data-answer="${part.blank}" data-blank-index="${currentBlankIndex}" class="story-blank p-1 mx-1 w-48 text-center font-semibold focus:outline-none focus:ring-2 focus:ring-sky-400" autocomplete="off"><div id="hint-container-${currentBlankIndex}" class="absolute -top-6 right-0"></div>${hintButton}</div>`;
+                }
+            }).join('');
+
+            const contentHtml = `
+                <h3 class="text-2xl font-bold text-center mb-6 text-slate-700">${story.title}</h3>
+                <form id="story-form" class="text-lg leading-loose text-slate-600">
+                    <p>${storyHtml}</p>
+                    <div id="feedback" class="mt-6"></div>
+                    <div class="mt-8 flex justify-center">
+                        <button type="submit" id="check-story" class="btn-primary font-bold py-3 px-8">Check Story</button>
+                    </div>
+                </form>
+                <div id="navigation-container" class="hidden"></div>
+            `;
+            app.innerHTML = renderActivityShell(activity, contentHtml, questionIndex);
+            enforceCompletion('story-form', 'check-story');
+
+            document.getElementById('story-form').onsubmit = (e) => {
+                e.preventDefault();
+                e.target.querySelector('button[type="submit"]').disabled = true;
+                const inputs = e.target.querySelectorAll('input');
+                let correctCount = 0;
+                inputs.forEach(input => {
+                    const isCorrect = input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase();
+                    input.readOnly = true;
+                    if(isCorrect) {
+                        correctCount++;
+                        input.classList.remove('border-sky-500');
+                        input.classList.add('bg-green-100', 'border-green-500');
+                    } else {
+                        input.classList.remove('border-sky-500');
+                        input.classList.add('bg-red-100', 'border-red-500');
+                        input.value = `${input.value} (${input.dataset.answer})`;
+                    }
+                });
+                handleAnswer(activity, correctCount, inputs.length);
+                const isAllCorrect = correctCount === inputs.length;
+                 document.getElementById('feedback').innerHTML = `<div class="fade-in ${isAllCorrect ? 'feedback-correct' : 'feedback-incorrect'} p-4 rounded-lg text-center"><p class="font-bold">You got ${correctCount} out of ${inputs.length} correct!</p></div>`;
+                const isLast = questionIndex >= activity.questions.length - 1;
+                if(isLast) state.completed[activity.id] = true;
+                const navContainer = document.getElementById('navigation-container');
+                navContainer.classList.remove('hidden');
+                navContainer.innerHTML = renderNavigation(activity, isLast);
+            }
+        }
+
+
+        function renderResultsPage() {
+            let timeString = 'N/A';
+            if (state.startTime && state.endTime) {
+                const timeDiff = state.endTime - state.startTime; const seconds = String(Math.floor((timeDiff / 1000) % 60)).padStart(2, '0');
+                const minutes = String(Math.floor((timeDiff / (1000 * 60)) % 60)).padStart(2, '0');
+                timeString = `${minutes}:${seconds}`;
+            }
+            const resultsHtml = `
+            <div class="fade-in">
+                <div class="text-center mb-8"><h1 class="text-5xl font-extrabold text-slate-800">Game Over!</h1><p class="text-slate-500 mt-2 text-lg">Here's your performance summary</p></div>
+                <div class="content-card p-8 rounded-3xl shadow-xl">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300/70"><span class="font-bold text-xl text-slate-700">Total Time</span><span class="font-bold text-xl text-sky-700">${timeString}</span></div>
+                    <div class="space-y-4">
+                        ${gameData.activities.map(activity => {
+                            const score = state.scores[activity.id] || 0;
+                            let total;
+                            if (activity.type === 'match') total = activity.questions.reduce((sum, q) => sum + q.pairs.length, 0);
+                            else if (activity.type === 'progression') total = activity.questions.reduce((sum, q) => sum + q.steps.length, 0);
+                            else if (activity.type === 'story') total = activity.questions.reduce((sum, q) => sum + q.sentences.filter(s => s.blank).length, 0);
+                            else total = activity.questions.length;
+                            
+                            const attempted = state.attempted[activity.id] || 0;
+                            const started = state.activityStartTimes[activity.id];
+                            let scoreDisplay = 'Not Started';
+                            if (started) {
+                                scoreDisplay = attempted > 0 ? `Score: ${score}/${attempted}` : 'Score: 0/0';
+                            }
+                            const startTimeDisplay = started ? started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                            return `<div class="p-4 rounded-lg ${started ? 'bg-white/60' : 'bg-slate-100/60'} grid grid-cols-4 items-center gap-4">
+                                <div class="col-span-2">
+                                    <p class="font-semibold text-slate-800">${activity.title}</p>
+                                    ${started ? `<p class="text-xs text-slate-500">Started at ${startTimeDisplay}</p>` : ''}
+                                </div>
+                                <span class="font-medium text-center ${started ? 'text-slate-600' : 'text-slate-400'} col-span-1">Attempted: ${attempted}/${total}</span>
+                                <span class="font-bold text-right ${started ? 'text-sky-600' : 'text-slate-500'} col-span-1">${scoreDisplay}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="mt-8 flex justify-center gap-4">
+                        <button onclick="returnToMenu()" class="btn-secondary font-bold py-3 px-8">Back to Menu</button>
+                        <button onclick="initializeGame()" class="btn-primary font-bold py-3 px-8">Play Again</button>
+                    </div>
+                </div>
+            </div>`;
+            app.innerHTML = resultsHtml;
+        }
+
+        function startActivity(index) {
+            document.getElementById('app').classList.remove('justify-center');
+            if (!state.startTime) state.startTime = new Date();
+            const activity = gameData.activities[index];
+            if(!state.activityStartTimes[activity.id]) {
+                state.activityStartTimes[activity.id] = new Date();
+            }
+            state.currentActivityIndex = index;
+            if(!state.scores[activity.id]) state.scores[activity.id] = 0;
+            if(!state.attempted[activity.id]) state.attempted[activity.id] = 0;
+            
+            let questionIndex = 0;
+            if (activity.type === 'match' || activity.type === 'build') {
+                 questionIndex = state.attempted[activity.id] || 0;
+            } else if (activity.type === 'progression') {
+                let attemptedCount = state.attempted[activity.id] || 0;
+                let caseIdx = 0;
+                let stepIdx = 0;
+                while(attemptedCount > 0 && caseIdx < activity.questions.length) {
+                    const stepsInCase = activity.questions[caseIdx].steps.length;
+                    if(attemptedCount >= stepsInCase) {
+                        attemptedCount -= stepsInCase;
+                        caseIdx++;
+                    } else {
+                        stepIdx = attemptedCount;
+                        attemptedCount = 0;
+                    }
+                }
+                 if (caseIdx >= activity.questions.length) {
+                    caseIdx = activity.questions.length - 1;
+                    stepIdx = activity.questions[caseIdx].steps.length -1;
+                 }
+                renderCaseProgression(activity, caseIdx, stepIdx);
+                return;
+            } else if (activity.type === 'story') {
+                 questionIndex = Math.floor((state.attempted[activity.id] || 0) / 3);
+            } else {
+                 questionIndex = state.attempted[activity.id] || 0;
+            }
+
+            if (questionIndex >= activity.questions.length) questionIndex = activity.questions.length - 1;
+
+            switch (activity.type) {
+                case 'breakdown': renderBreakdown(activity, questionIndex); break;
+                case 'build': renderBuildAWord(activity, questionIndex); break;
+                case 'match': renderMatch(activity, questionIndex); break;
+                case 'story': renderStory(activity, questionIndex); break;
+                case 'choice': renderChoice(activity, questionIndex); break;
+                case 'fill': renderFill(activity, questionIndex); break;
+                default: renderMenu();
+            }
+        }
+        
+        function nextActivity() {
+            if (state.currentActivityIndex < gameData.activities.length - 1) {
+                startActivity(state.currentActivityIndex + 1);
+            } else { endGame(); }
+        }
+        
+        initializeGame();
+    </script>
+</body>
+</html>
+
