@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Terminology Game: The Urinary System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #f8fafc; /* Slate-50 */
+            overflow-y: auto;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(100, 116, 139, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px -10px rgba(14, 165, 233, 0.15);
+        }
+
+        .feedback-correct {
+            border-left: 5px solid #34d399;
+            background-color: #f0fdfa;
+            color: #047857;
+        }
+        .feedback-incorrect {
+            border-left: 5px solid #fb7185;
+            background-color: #fff1f2;
+            color: #be123c;
+        }
+         .feedback-warning {
+            border-left: 5px solid #f59e0b; /* Amber-500 */
+            background-color: #fffbeb;
+            color: #b45309;
+        }
+
+        .btn-primary {
+            background: #0ea5e9; /* Sky-500 */
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 20px -5px rgba(14, 165, 233, 0.5);
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 25px -5px rgba(14, 165, 233, 0.7);
+            background: #0284c7; /* Sky-600 */
+        }
+        .btn-primary:disabled {
+            background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: #f8fafc;
+            color: #0284c7;
+            border: 1px solid #e0f2fe;
+            border-radius: 9999px;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .btn-secondary:hover {
+            background-color: #f0f9ff;
+            transform: scale(1.05);
+            border-color: #bae6fd;
+        }
+
+        .btn-exit {
+            color: #f43f5e;
+            border-color: #fecdd3;
+        }
+        .btn-exit:hover {
+            background-color: #fff1f2;
+            border-color: #fda4af;
+        }
+        
+        .decision-option {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .decision-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-color: #0ea5e9;
+        }
+
+        .progress-bar-segment {
+            transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .match-item, .build-item {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .match-item:active, .build-item:active { cursor: grabbing; }
+
+        .dragging {
+            opacity: 0.6;
+            transform: scale(1.08) rotate(3deg);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+        }
+        .drop-hover {
+            border-color: #38bdf8;
+            background-color: #e0f2fe;
+        }
+        #pause-overlay {
+            background-color: rgba(248, 250, 252, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+         .story-blank {
+            border-bottom: 2px solid #38bdf8;
+            background-color: #f0f9ff;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-800">
+
+    <div id="app" class="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto min-h-screen flex flex-col justify-center relative">
+        <!-- Game content will be rendered here -->
+    </div>
+
+    <div id="pause-overlay" class="fixed inset-0 z-50 hidden items-center justify-center" onclick="togglePause()">
+        <div class="content-card p-12 rounded-3xl text-center shadow-2xl">
+            <h2 class="text-4xl font-bold text-sky-800">Game Paused</h2>
+            <p class="text-slate-600 mt-2">Click anywhere to resume</p>
+        </div>
+    </div>
+
+    <script>
+        // --- ADAPTIVE QUESTION DATABASE (Chapter 9: Urinary System) ---
+        const questions = {
+            // --- LEVEL 1: EASY (Definitions) ---
+            1: [
+                { id: 'l1_q1', type: 'choice', prompt: "What is the combining form for 'kidney'?", options: ["nephr/o", "cyst/o", "pyel/o"], answer: "nephr/o", feedback: "`nephr/o` and `ren/o` both mean kidney. `cyst/o` means bladder." },
+                { id: 'l1_q2', type: 'choice', prompt: "What is the combining form for 'urinary bladder'?", options: ["urethr/o", "ureter/o", "cyst/o"], answer: "cyst/o", feedback: "`cyst/o` means bladder. `urethr/o` is urethra, and `ureter/o` is ureter." },
+                { id: 'l1_q3', type: 'choice', prompt: "What is the combining form for 'renal pelvis'?", options: ["pyel/o", "nephr/o", "prostat/o"], answer: "pyel/o", feedback: "`pyel/o` means renal pelvis." },
+                { id: 'l1_q4', type: 'choice', prompt: "What does the suffix '-uria' mean?", options: ["Urine", "Ureter", "Urethra"], answer: "Urine", feedback: "'-uria' is a suffix meaning urine or urination." },
+                { id: 'l1_q5', type: 'fill', prompt: "The combining form for 'ureter' is __.", answer: "ureter/o", feedback: "The combining form for 'ureter' is `ureter/o`." },
+                { id: 'l1_q6', type: 'fill', prompt: "The suffix for 'surgical removal' is __.", answer: "-ectomy", feedback: "The suffix for 'surgical removal' is `-ectomy`." },
+                { id: 'l1_q7', type: 'fill', prompt: "The combining form for 'prostate' is __.", answer: "prostat/o", feedback: "The combining form for 'prostate' is `prostat/o`." },
+                { id: 'l1_q8', type: 'fill', prompt: "The suffix for 'surgical fixation' is __.", answer: "-pexy", feedback: "The suffix for 'surgical fixation' is `-pexy`." },
+                { id: 'l1_q9', type: 'choice', prompt: "What does the prefix 'an-' mean in 'anuria'?", options: ["Without", "Many", "Painful"], answer: "Without", feedback: "`An-` is a prefix meaning without or absence of." },
+                { id: 'l1_q10', type: 'fill', prompt: "The suffix '-cele' means __.", answer: "hernia", feedback: "The suffix '-cele' means a hernia, tumor, or swelling." },
+            ],
+            // --- LEVEL 2: MEDIUM (Applying Terms) ---
+            2: [
+                { id: 'l2_q1', type: 'choice', prompt: "What is the term for 'inflammation of the bladder'?", options: ["Nephritis", "Cystitis", "Urethritis"], answer: "Cystitis", feedback: "`Cyst/o` (bladder) + `-itis` (inflammation) = Cystitis." },
+                { id: 'l2_q2', type: 'choice', prompt: "What is 'dysuria'?", options: ["Painful urination", "Excessive urination", "Scanty urination"], answer: "Painful urination", feedback: "`Dys-` (bad, difficult, painful) + `-uria` (urination) = Painful urination." },
+                { id: 'l2_q3', type: 'choice', prompt: "What is 'nocturia'?", options: ["Absence of urine", "Blood in the urine", "Excessive urination at night"], answer: "Excessive urination at night", feedback: "`Noct/i` (night) + `-uria` (urination) = Excessive urination at night." },
+                { id: 'l2_q4', type: 'breakdown', prompt: "Nephrolith", parts: [{label: "Root", value: "nephr/o"}, {label: "Suffix", value: "-lith"}], answer: "nephr/o-lith", feedback: "`nephr/o` (kidney) + `-lith` (stone). A kidney stone." },
+                { id: 'l2_q5', type: 'fill', prompt: "The term for 'scanty urination' is __.", answer: "oliguria", feedback: "`Olig-` (scanty) + `-uria` (urination) = Oliguria." },
+                { id: 'l2_q6', type: 'fill', prompt: "The term for 'pus in the urine' is __.", answer: "pyuria", feedback: "`Py-` (pus) + `-uria` (urine) = Pyuria." },
+                { id: 'l2_q7', type: 'breakdown', prompt: "Pyelonephritis", parts: [{label: "Root", value: "pyel/o"}, {label: "Root", value: "nephr"}, {label: "Suffix", value: "-itis"}], answer: "pyel/o-nephr-itis", feedback: "`pyel/o` (renal pelvis) + `nephr` (kidney) + `-itis` (inflammation)." },
+                { id: 'l2_q8', type: 'choice', prompt: "What is 'anuria'?", options: ["Absence of urine", "Painful urine", "Excessive urine"], answer: "Absence of urine", feedback: "`An-` (without) + `-uria` (urine) = Absence of urine." },
+                { id: 'l2_q9', type: 'match', pairs: [ { term: "Hematuria", definition: "Blood in the urine." }, { term: "Bacteriuria", definition: "Bacteria in the urine." }, { term: "Polyuria", definition: "Excessive urination." } ], hint: "Match the term to its definition." },
+                { id: 'l2_q10', type: 'build', definition: "Inflammation of the kidney.", parts: ["nephr", "-itis"], foils: ["-osis", "cyst/o"], hint: "What is the root for 'kidney' and suffix for 'inflammation'?" },
+                { id: 'l2_q11', type: 'choice', prompt: "What is 'enuresis'?", options: ["Bed-wetting", "Inability to urinate", "Blood in the urine"], answer: "Bed-wetting", feedback: "Enuresis is the involuntary discharge of urine, also known as bed-wetting." },
+            ],
+            // --- LEVEL 3: HARD (Concepts & Procedures) ---
+            3: [
+                { id: 'l3_q1', type: 'choice', prompt: "A patient with uncontrolled diabetes develops kidney disease. What is this condition called?", options: ["Nephrolithiasis", "Diabetic Nephropathy", "Glomerulonephritis"], answer: "Diabetic Nephropathy", feedback: "`Nephropathy` is any disease of the kidney. This is a common complication of diabetes." },
+                { id: 'l3_q2', type: 'choice', prompt: "What is the procedure that uses high-energy sound waves to crush kidney stones?", options: ["Lithotripsy", "Nephrectomy", "Cystoscopy"], answer: "Lithotripsy", feedback: "`Lith/o` (stone) + `-tripsy` (to crush) = Lithotripsy." },
+                { id: 'l3_q3', type: 'choice', prompt: "A patient's kidneys are failing. What is the toxic condition resulting from waste products building up in the blood?", options: ["Uremia", "Hematuria", "Ketoacidosis"], answer: "Uremia", feedback: "`Ur` (urine) + `-emia` (blood condition) = Uremia, a toxic condition." },
+                { id: 'l3_q4', type: 'fill', prompt: "A 'KUB' is an x-ray of the kidneys, ureters, and __.", answer: "bladder", feedback: "KUB stands for Kidneys, Ureters, Bladder." },
+                { id: 'l3_q5', type: 'fill', prompt: "The procedure to free a kidney from adhesions is called __.", answer: "nephrolysis", feedback: "`Nephr/o` (kidney) + `-lysis` (to free or destroy)." },
+                { id: 'l3_q6', type: 'choice', prompt: "A 68-year-old male presents with difficulty urinating and a weak stream. This is most likely caused by an enlarged prostate, a condition known as:", options: ["Prostatitis", "Benign Prostatic Hyperplasia (BPH)", "Nephritis"], answer: "Benign Prostatic Hyperplasia (BPH)", feedback: "BPH is a non-cancerous enlargement of the prostate gland that can restrict the urethra." },
+                { id: 'l3_q7', type: 'fill', prompt: "A 'TURP' procedure is used to treat BPH. What does TURP stand for?", answer: "Transurethral Resection of the Prostate", feedback: "Transurethral Resection of the Prostate (TURP)." },
+                { id: 'l3_q8', type: 'breakdown', prompt: "Cystourethrography", parts: [{label: "Root", value: "cyst/o"}, {label: "Root", value: "urethr/o"}, {label: "Suffix", value: "-graphy"}], answer: "cyst/o-urethr/o-graphy", feedback: "`cyst/o` (bladder) + `urethr/o` (urethra) + `-graphy` (process of recording)." },
+                { id: 'l3_q9', type: 'story', title: "Kidney Stone Journey", sentences: [
+                    { text: "A patient presents with severe flank pain and " }, { blank: "hematuria", hint: "Blood in the urine." },
+                    { text: ". A KUB x-ray reveals a large " }, { blank: "nephrolith", hint: "Kidney stone (term)." },
+                    { text: " in the renal pelvis. The urologist decides to use sound waves to crush the stone in a procedure called " }, { blank: "lithotripsy", hint: "Surgical crushing of a stone." },
+                    { text: "." }
+                ]},
+                { id: 'l3_q10', type: 'choice', prompt: "What is 'diuresis'?", options: ["Increased output of urine", "Absence of urine", "Surgical repair of the ureter"], answer: "Increased output of urine", feedback: "`Di-` (through) + `-uresis` (urination) = Diuresis, the increased output of urine." },
+                { id: 'l3_q11', type: 'fill', prompt: "Surgical removal of a kidney is a __.", answer: "nephrectomy", feedback: "`Nephr/o` (kidney) + `-ectomy` (surgical removal)." }
+            ]
+        };
+
+        let state = {};
+        
+        function initializeGame() {
+            state = {
+                difficultyLevel: 2, // Start at medium
+                questionIndices: { 1: 0, 2: 0, 3: 0 },
+                score: 0,
+                attempted: 0,
+                isPaused: false,
+                startTime: null,
+                endTime: null,
+            };
+            renderMenu();
+        }
+
+        const app = document.getElementById('app');
+
+        function readAloud(textToSpeak) {
+            if ('speechSynthesis' in window && !state.isPaused) {
+                const utterance = new SpeechSynthesisUtterance(textToSpeak); utterance.lang = 'en-US';
+                window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
+            } else if (!('speechSynthesis' in window)) {
+                alert('Sorry, your browser does not support text-to-speech.');
+            }
+        }
+        
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            document.getElementById('pause-overlay').style.display = state.isPaused ? 'flex' : 'none';
+        }
+
+        function endGame() {
+            if (state.startTime && !state.endTime) state.endTime = new Date();
+            renderResultsPage();
+        }
+        
+        function returnToMenu() {
+            initializeGame();
+        }
+
+        function renderMenu() {
+            const menuContainer = document.createElement('div');
+            menuContainer.className = "min-h-screen flex flex-col justify-center";
+            const menuHtml = `
+                <div class="text-center mb-10 fade-in">
+                    <div class="flex items-center justify-center gap-4">
+                        <div>
+                            <h1 class="text-5xl font-extrabold text-slate-800 tracking-tight">The Urinary System</h1>
+                            <p class="text-slate-500 mt-1 text-lg font-medium">Week 9: Adaptive Challenge</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card menu-card p-8 rounded-2xl shadow-lg cursor-pointer flex flex-col items-center justify-center fade-in" style="animation-delay: 100ms" onclick="startActivity()">
+                    <svg class="w-16 h-16 text-sky-400 mb-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-pulse"><path d="M12 2v4"/><path d="m12.4 17.8 1.6 1.4 1.6-1.4"/><path d="M12 8a4 4 0 0 0-4 4H4v6a2 2 0 0 0 2 2h2"/><path d="M12 8a4 4 0 0 1 4 4h4v6a2 2 0 0 1-2 2h-2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>
+                    <h2 class="text-2xl font-bold text-slate-900">Start Diagnosis Challenge</h2>
+                    <p class="text-slate-500 mt-1">Questions adapt to your skill level.</p>
+                </div>
+            `;
+            menuContainer.innerHTML = menuHtml;
+            app.innerHTML = '';
+            app.appendChild(menuContainer);
+            app.classList.add('justify-center');
+        }
+        
+        function renderQuestionFrame(question) {
+            let questionContentHtml = '';
+            let formId = '';
+            let submitId = '';
+            let textToRead = question.prompt;
+
+            switch(question.type) {
+                case 'choice':
+                    questionContentHtml = `
+                        <div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200"><p class="text-xl text-center font-medium">${question.prompt}</p></div>
+                        <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            ${question.options.map(option => `<button data-answer="${option}" class="text-left p-4 border-2 border-slate-200 rounded-lg hover:bg-sky-50 hover:border-sky-500 transition-all duration-200 font-medium">${option}</button>`).join('')}
+                        </div>`;
+                    break;
+                case 'fill':
+                    formId = 'fill-form';
+                    submitId = 'submit-fill';
+                    textToRead = question.prompt.replace('__', 'blank');
+                    questionContentHtml = `
+                        <form id="${formId}"><div class="bg-slate-50/70 p-6 rounded-lg mb-6 border border-slate-200 text-center text-xl">
+                            <label for="blank-input" class="flex justify-center items-center gap-2 flex-wrap">
+                                <span>${question.prompt.split('__')[0]}</span>
+                                <input type="text" id="blank-input" class="mx-2 p-2 w-48 text-center border-b-2 border-slate-400 bg-transparent focus:outline-none focus:border-sky-500 font-semibold" autocomplete="off">
+                                <span>${question.prompt.split('__')[1] || ''}</span>
+                            </label>
+                        </div>
+                        <div class="flex justify-center"><button type="submit" id="${submitId}" class="btn-primary font-bold py-3 px-8">Check Answer</button></div>
+                        </form>`;
+                    break;
+                case 'breakdown':
+                    formId = 'breakdown-form';
+                    submitId = 'submit-breakdown';
+                    textToRead = `Break down the term: ${question.prompt}`;
+                    questionContentHtml = `
+                        <div class="text-center mb-6"><p class="text-lg text-slate-500">Break down the term:</p><h2 class="text-4xl font-bold text-slate-700 tracking-tight">${question.prompt}</h2></div>
+                        <form id="${formId}"><div class="grid grid-cols-1 ${question.parts.length > 1 ? 'md:grid-cols-2' : ''} gap-6 mb-6">
+                            ${question.parts.map((part, index) => `<div class="space-y-2"><label class="font-semibold text-slate-700">${part.label}</label><input type="text" placeholder="Enter Part" data-part-index="${index}" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"></div>`).join('')}
+                        </div>
+                        <div class="flex justify-center"><button type="submit" id="${submitId}" class="btn-primary font-bold py-3 px-8">Check Answer</button></div>
+                        </form>`;
+                    break;
+                case 'build':
+                    formId = 'build-form';
+                    submitId = 'check-build';
+                    textToRead = `Build the term for: ${question.definition}`;
+                    const allParts = [...question.parts, ...question.foils];
+                    const shuffledParts = allParts.sort(() => Math.random() - 0.5);
+                    questionContentHtml = `
+                        <div class="text-center mb-6">
+                            <p class="text-lg text-slate-500">Build the term for:</p>
+                            <p class="text-xl font-semibold text-slate-700">${question.definition}</p>
+                        </div>
+                        <div id="build-zone" class="flex items-center justify-center gap-2 bg-slate-100 p-4 rounded-lg min-h-[60px] border-2 border-dashed border-slate-300">
+                            <!-- Drop targets will go here -->
+                        </div>
+                        <div id="answer-bank" class="flex flex-wrap items-center justify-center gap-3 bg-slate-50 p-4 rounded-lg mt-6 min-h-[80px]">
+                            ${shuffledParts.map(part => `<div draggable="true" class="build-item bg-white p-2 px-4 rounded-full shadow cursor-grab active:cursor-grabbing border border-slate-200">${part}</div>`).join('')}
+                        </div>
+                        <div class="mt-8 flex justify-center">
+                            <button type="button" id="${submitId}" class="btn-primary font-bold py-3 px-8">Check Answer</button>
+                        </div>`;
+                    break;
+                case 'story':
+                    formId = 'story-form';
+                    submitId = 'check-story';
+                    let storyHtml = '';
+                    let blankIndex = 0;
+                    textToRead = '';
+                    story.sentences.forEach(part => {
+                        if (part.text) {
+                            storyHtml += `<span>${part.text}</span>`;
+                            textToRead += part.text;
+                        } else if (part.blank) {
+                            const currentBlankIndex = blankIndex;
+                            const hintButton = part.hint ? `<button type="button" onclick="showHint('${part.hint.replace(/'/g, "\\'")}', ${currentBlankIndex})" class="text-sky-500 font-bold ml-1 absolute right-2 top-1/2 -translate-y-1/2">?</button>` : '';
+                            storyHtml += `<div class="inline-block relative"><input type="text" data-answer="${part.blank}" data-blank-index="${currentBlankIndex}" class="story-blank p-1 mx-1 w-48 text-center font-semibold focus:outline-none focus:ring-2 focus:ring-sky-400" autocomplete="off"><div id="hint-container-${currentBlankIndex}" class="absolute -top-6 right-0"></div>${hintButton}</div>`;
+                            textToRead += " blank ";
+                            blankIndex++;
+                        }
+                    });
+
+                    questionContentHtml = `
+                        <h3 class="text-2xl font-bold text-center mb-6 text-slate-700">${question.title}</h3>
+                        <form id="${formId}" class="text-lg leading-loose text-slate-600">
+                            <p>${storyHtml}</p>
+                            <div class="mt-8 flex justify-center">
+                                <button type="submit" id="${submitId}" class="btn-primary font-bold py-3 px-8">Check Story</button>
+                            </div>
+                        </form>`;
+                    break;
+            }
+
+            const shellHtml = `
+                <div class="fade-in w-full my-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-sm font-semibold text-sky-800">Question ${state.attempted + 1} | Difficulty Level: ${state.difficultyLevel}</span>
+                        <div>
+                            <button onclick="returnToMenu()" class="btn-secondary text-sm font-semibold py-2 px-4" aria-label="Back to Menu">Menu</button>
+                            <button onclick="endGame()" class="ml-2 btn-secondary btn-exit text-sm font-semibold py-2 px-4" aria-label="End Game">Exit</button>
+                            <button onclick="readAloud('${textToRead.replace(/'/g, "\\'")}')" class="icon-btn ml-2" aria-label="Read aloud">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            </button>
+                            <button onclick="togglePause()" class="icon-btn ml-2" aria-label="Pause Game">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="content-card p-8 rounded-3xl shadow-xl">
+                        ${questionContentHtml}
+                        <div id="feedback" class="mt-6"></div>
+                        <div id="navigation-container" class="hidden"></div>
+                    </div>
+                </div>
+            `;
+            app.innerHTML = shellHtml;
+            app.classList.remove('justify-center');
+
+            // Add event listeners
+            if (question.type === 'choice') {
+                document.querySelectorAll('#options-container button').forEach(button => {
+                    button.onclick = () => checkAnswer(button.dataset.answer === question.answer, question);
+                });
+            } else if (question.type === 'fill') {
+                document.getElementById(formId).onsubmit = (e) => {
+                    e.preventDefault();
+                    const input = e.target.querySelector('#blank-input');
+                    const isCorrect = input.value.trim().toLowerCase() === question.answer.toLowerCase();
+                    input.readOnly = true;
+                    if (isCorrect) input.classList.add('border-green-500', 'bg-green-50'); 
+                    else input.classList.add('border-red-500', 'bg-red-50');
+                    checkAnswer(isCorrect, question, e.target.querySelector(`#${submitId}`));
+                };
+            } else if (question.type === 'breakdown') {
+                document.getElementById(formId).onsubmit = (e) => {
+                    e.preventDefault();
+                    let allCorrect = true;
+                    const inputs = e.target.querySelectorAll('input');
+                    inputs.forEach((input, index) => {
+                        const part = question.parts[index];
+                        const isCorrect = input.value.trim().toLowerCase() === part.value.toLowerCase();
+                        input.readOnly = true;
+                        if (isCorrect) {
+                            input.classList.add('bg-green-100', 'border-green-400');
+                        } else {
+                            allCorrect = false;
+                            input.classList.add('bg-red-100', 'border-red-400');
+                        }
+                    });
+                    checkAnswer(allCorrect, question, e.target.querySelector(`#${submitId}`));
+                };
+            } else if (question.type === 'build') {
+                setupDragAndDrop('build-item', ['build-zone', 'answer-bank']);
+                document.getElementById(submitId).addEventListener('click', (e) => {
+                    const buildZone = document.getElementById('build-zone');
+                    const builtParts = [...buildZone.children].map(el => el.textContent);
+                    
+                    if (builtParts.length === 0) {
+                        showWarning("Please build the word before checking.");
+                        return;
+                    }
+                    e.target.disabled = true;
+                    const builtWord = builtParts.join('');
+                    const correctWord = question.parts.join('');
+                    const isCorrect = builtWord === correctWord;
+                    checkAnswer(isCorrect, question);
+                });
+            } else if (question.type === 'story') {
+                enforceCompletion(formId, submitId);
+                document.getElementById(formId).onsubmit = (e) => {
+                    e.preventDefault();
+                    e.target.querySelector('button[type="submit"]').disabled = true;
+                    const inputs = e.target.querySelectorAll('input');
+                    let correctCount = 0;
+                    inputs.forEach(input => {
+                        const isCorrect = input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase();
+                        input.readOnly = true;
+                        if(isCorrect) {
+                            correctCount++;
+                            input.classList.remove('border-sky-500');
+                            input.classList.add('bg-green-100', 'border-green-500');
+                        } else {
+                            input.classList.remove('border-sky-500');
+                            input.classList.add('bg-red-100', 'border-red-500');
+                            input.value = `${input.value} (${input.dataset.answer})`; // Show correct answer
+                        }
+                    });
+                    const isAllCorrect = correctCount === inputs.length;
+                    checkAnswer(isAllCorrect, question, null, inputs.length);
+                };
+            }
+        }
+        
+        function setupDragAndDrop(itemClass, zoneIds) {
+            let draggedItem = null;
+            document.querySelectorAll(`.${itemClass}`).forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                });
+                item.addEventListener('dragend', () => {
+                    draggedItem?.classList.remove('dragging');
+                    draggedItem = null;
+                });
+            });
+
+            zoneIds.map(id => document.getElementById(id)).forEach(target => {
+                target.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    target.classList.add('drop-hover');
+                });
+                target.addEventListener('dragleave', () => target.classList.remove('drop-hover'));
+                target.addEventListener('drop', e => {
+                    e.preventDefault();
+                    target.classList.remove('drop-hover');
+                    if (draggedItem) {
+                        if (target.children.length > 0 && target.id !== 'answer-bank') {
+                             document.getElementById('answer-bank').appendChild(target.children[0]);
+                        }
+                        if(target.id !== 'answer-bank') target.innerHTML = '';
+                        target.appendChild(draggedItem);
+                    }
+                });
+            });
+        }
+
+        function showWarning(message) {
+            const feedback = document.getElementById('feedback');
+            feedback.innerHTML = `<div class="fade-in feedback-warning p-4 rounded-lg text-center"><p class="font-bold">${message}</p></div>`;
+            setTimeout(() => feedback.innerHTML = '', 3000);
+        }
+
+        function checkAnswer(isCorrect, question, submitButton = null, numAttempted = 1) {
+            if (submitButton) submitButton.disabled = true;
+            document.querySelectorAll('#options-container button').forEach(btn => btn.disabled = true);
+            
+            state.attempted++;
+            if (isCorrect) {
+                state.score++;
+                document.getElementById('feedback').innerHTML = `<div class="fade-in feedback-correct p-4 rounded-lg"><p class="font-bold">Correct!</p><p class="mt-1 text-sm">${question.feedback}</p></div>`;
+                if (state.difficultyLevel < 3) state.difficultyLevel++;
+            } else {
+                document.getElementById('feedback').innerHTML = `<div class="fade-in feedback-incorrect p-4 rounded-lg"><p class="font-bold">Incorrect.</p><p class="mt-1 text-sm">${question.feedback}</p></div>`;
+                if (state.difficultyLevel > 1) state.difficultyLevel--;
+            }
+            
+            if (question.type === 'story' || question.type === 'match') {
+                // These types submit multiple answers at once
+                // We've already handled the single "attempt"
+            }
+            
+            const isLast = state.attempted >= 10;
+            
+            const navContainer = document.getElementById('navigation-container');
+            navContainer.classList.remove('hidden');
+            navContainer.innerHTML = isLast ? 
+                `<div class="mt-8 flex justify-end fade-in"><button onclick="endGame()" class="btn-primary font-semibold py-3 px-8">See Results</button></div>` :
+                `<div class="mt-8 flex justify-end fade-in"><button onclick="nextQuestion()" class="btn-primary font-semibold py-3 px-8">Next Question</button></div>`;
+        }
+        
+        function nextQuestion() {
+            const level = state.difficultyLevel;
+            let index = state.questionIndices[level];
+            
+            // If we've run out of questions at this level, wrap around
+            if (index >= questions[level].length) {
+                index = 0;
+                state.questionIndices[level] = 0;
+            }
+            
+            const question = questions[level][index];
+            state.questionIndices[level]++; // Increment for next time
+            
+            renderQuestionFrame(question);
+        }
+
+        function renderResultsPage() {
+            let timeString = 'N/A';
+            if (state.startTime && state.endTime) {
+                const timeDiff = state.endTime - state.startTime; const seconds = String(Math.floor((timeDiff / 1000) % 60)).padStart(2, '0');
+                const minutes = String(Math.floor((timeDiff / (1000 * 60)) % 60)).padStart(2, '0');
+                timeString = `${minutes}:${seconds}`;
+            }
+            const resultsHtml = `
+            <div class="fade-in">
+                <div class="text-center mb-8"><h1 class="text-5xl font-extrabold text-slate-800">Challenge Complete!</h1><p class="text-slate-500 mt-2 text-lg">Here's your performance summary</p></div>
+                <div class="content-card p-8 rounded-3xl shadow-xl">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300/70"><span class="font-bold text-xl text-slate-700">Total Time</span><span class="font-bold text-xl text-sky-700">${timeString}</span></div>
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300/70"><span class="font-bold text-xl text-slate-700">Final Score</span><span class="font-bold text-xl text-sky-700">${state.score} / ${state.attempted}</span></div>
+                    <div class="space-y-4">
+                        <p class="text-center text-slate-600">You completed ${state.attempted} questions and ended at Difficulty Level ${state.difficultyLevel}.</p>
+                    </div>
+                    <div class="mt-8 flex justify-center gap-4">
+                        <button onclick="returnToMenu()" class="btn-secondary font-bold py-3 px-8">Back to Menu</button>
+                        <button onclick="initializeGame()" class="btn-primary font-bold py-3 px-8">Play Again</button>
+                    </div>
+                </div>
+            </div>`;
+            app.innerHTML = resultsHtml;
+        }
+
+        function startActivity(index) {
+            document.getElementById('app').classList.remove('justify-center');
+            if (!state.startTime) state.startTime = new Date();
+            
+            // Start with the first question at level 2
+            const question = questions[2][0];
+            state.questionIndices[2]++;
+            renderQuestionFrame(question);
+        }
+        
+        initializeGame();
+    </script>
+</body>
+</html>
