@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 11: Special Senses</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; user-select: none; }
+        
+        /* Smooth Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        
+        /* Interactive Elements */
+        .hit-box { fill: transparent; stroke: rgba(255,255,255,0.2); stroke-width: 1; cursor: pointer; transition: all 0.2s; }
+        .hit-box:hover { fill: rgba(56, 189, 248, 0.2); stroke: #38bdf8; }
+        .hit-box-correct { fill: rgba(34, 197, 94, 0.5) !important; stroke: #22c55e !important; }
+        .hit-box-wrong { fill: rgba(239, 68, 68, 0.5) !important; stroke: #ef4444 !important; }
+
+        .btn-option { transition: transform 0.1s, background-color 0.2s; }
+        .btn-option:active { transform: scale(0.98); }
+
+        /* Scrollbar for long content */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div id="start-screen" class="text-center max-w-lg w-full fade-in">
+        <div class="mb-4 text-7xl animate-pulse">👁️</div>
+        <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-500">Chapter 11</h1>
+        <h2 class="text-2xl text-slate-200 mb-8 font-bold uppercase tracking-widest">Special Senses: Eyes & Ears</h2>
+        
+        <div class="grid grid-cols-2 gap-3 mb-8 text-left text-sm text-slate-400">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 hover:border-sky-500 transition-colors">
+                <span class="text-2xl block mb-1">🔍</span>
+                <strong>Visual Diagnostics</strong><br>Identify anatomy on diagrams
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 hover:border-sky-500 transition-colors">
+                <span class="text-2xl block mb-1">⚡</span>
+                <strong>Triage Rush</strong><br>Sort Eye vs. Ear terms
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 hover:border-sky-500 transition-colors">
+                <span class="text-2xl block mb-1">🧩</span>
+                <strong>Word Builder</strong><br>Construct medical terms
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 hover:border-sky-500 transition-colors">
+                <span class="text-2xl block mb-1">🚑</span>
+                <strong>Clinical Cases</strong><br>Diagnose & Treat
+            </div>
+        </div>
+
+        <button onclick="startGame()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-4 rounded-2xl shadow-xl shadow-indigo-900/50 text-xl transition-all hover:scale-[1.02]">
+            Start Rotation
+        </button>
+    </div>
+
+    <div id="game-ui" class="hidden w-full max-w-2xl relative">
+        
+        <header class="flex justify-between items-start mb-4 px-2">
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-3">
+                    <div class="text-xs font-bold text-sky-400 uppercase tracking-widest">Score</div>
+                    <div class="text-xs font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded font-mono" id="timer-display">00:00</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="score-display" class="text-3xl font-black text-white">0</span>
+                    <span class="text-xs text-slate-500 mt-2">pts</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-col items-end gap-2">
+                <button onclick="gameOver('manual')" class="text-[10px] font-bold text-red-400 border border-red-900/50 hover:bg-red-900/20 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 transition-colors">
+                    End Shift
+                </button>
+                <div class="flex gap-1 text-red-500 text-xl" id="lives-container">♥♥♥</div>
+            </div>
+        </header>
+
+        <main id="card-container" class="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-3xl p-6 shadow-2xl min-h-[520px] flex flex-col justify-center relative overflow-hidden transition-all">
+            </main>
+        
+        <div class="flex justify-between items-center mt-4 px-2">
+            <p class="text-slate-500 text-xs font-medium">Question <span id="q-count">1</span></p>
+            <div id="feedback-toast" class="text-xs font-bold text-sky-400 opacity-0 transition-opacity">Selection registered</div>
+        </div>
+    </div>
+
+    <script>
+        // === MASTER DATABASE (Sourced from Senses-ENT.pptx) ===
+
+        // 1. STANDARD QUESTIONS (Multiple Choice)
+        const dbStandard = [
+            // Roots
+            { category: "Terminology", prompt: "Combining form 'dacryocyst/o' means:", options: ["Lacrimal Sac", "Cornea", "Eardrum", "Lens"], answer: "Lacrimal Sac", feedback: "Refers to the tear sac." },
+            { category: "Terminology", prompt: "Combining form 'phac/o' means:", options: ["Lens", "Light", "Eye", "Old Age"], answer: "Lens", feedback: "Think 'Phacoemulsification'." },
+            { category: "Terminology", prompt: "Combining form 'myring/o' refers to:", options: ["Eardrum", "Middle Ear", "Inner Ear", "Cochlea"], answer: "Eardrum", feedback: "Synonymous with tympan/o." },
+            { category: "Terminology", prompt: "Combining form 'labyrinth/o' refers to:", options: ["Inner Ear", "Outer Ear", "Eye Muscle", "Tears"], answer: "Inner Ear", feedback: "The maze-like structure of the inner ear." },
+            // Anatomy
+            { category: "Eye Anatomy", prompt: "The 'Canthus' is:", options: ["Corner of the eye", "White of the eye", "Eyelash follicle", "Tear duct"], answer: "Corner of the eye", feedback: "Where upper and lower eyelids meet." },
+            { category: "Eye Vision", prompt: "Depth perception (3D vision) is also called:", options: ["Binocular vision", "Monocular vision", "Peripheral vision", "Refraction"], answer: "Binocular vision", feedback: "Bi- means two eyes working together." },
+            { category: "Ear Anatomy", prompt: "The 'Pinna' is located in the:", options: ["Outer ear", "Middle ear", "Inner ear", "Brain"], answer: "Outer ear", feedback: "It's the visible flap of the ear." },
+            // Treatments
+            { category: "Treatments", prompt: "Removal of the mastoid cells is a:", options: ["Mastoidectomy", "Myringotomy", "Otoplasty", "Stapedectomy"], answer: "Mastoidectomy", feedback: "Removal of bone cells behind the ear." },
+            { category: "Treatments", prompt: "Surgical repair of the pinna (outer ear) is:", options: ["Otoplasty", "Rhinoplasty", "Blepharoplasty", "Keratoplasty"], answer: "Otoplasty", feedback: "Ot/o (ear) + -plasty (repair)." },
+            { category: "Devices", prompt: "Device using a microchip to filter sound:", options: ["Digital hearing aid", "Analog hearing aid", "Stethoscope", "Otoscope"], answer: "Digital hearing aid", feedback: "Converts sound to code before amplifying." },
+            { category: "Surgery", prompt: "Creating a new opening in the labyrinth to restore hearing:", options: ["Fenestration", "Labyrinthectomy", "Myringotomy", "Incised"], answer: "Fenestration", feedback: "From 'fenestra' meaning window." }
+        ];
+
+        // 2. VISUAL DIAGNOSTICS (With Improved Spiral Cochlea)
+        const dbVisual = [
+            {
+                system: "EYE",
+                prompt: "Tap the **Sclera** (the white, tough outer layer).",
+                targetId: "hit-sclera",
+                svg: `<svg viewBox="0 0 300 200" class="w-full h-64 mx-auto drop-shadow-lg">
+                        <path d="M30,100 Q150,20 270,100 Q150,180 30,100 Z" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>
+                        <circle cx="150" cy="100" r="45" fill="#3b82f6" />
+                        <circle cx="150" cy="100" r="15" fill="#0f172a" />
+                        <path id="hit-sclera" d="M30,100 Q150,20 270,100 Q150,180 30,100 Z" class="hit-box" onclick="handleVisualClick('hit-sclera')" />
+                        <circle id="hit-iris" cx="150" cy="100" r="45" class="hit-box" onclick="handleVisualClick('hit-iris')" />
+                      </svg>`
+            },
+            {
+                system: "EYE",
+                prompt: "Tap the **Pupil** (the opening in the center).",
+                targetId: "hit-pupil",
+                svg: `<svg viewBox="0 0 300 200" class="w-full h-64 mx-auto drop-shadow-lg">
+                        <path d="M30,100 Q150,20 270,100 Q150,180 30,100 Z" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>
+                        <circle cx="150" cy="100" r="45" fill="#10b981" />
+                        <circle cx="150" cy="100" r="15" fill="#0f172a" />
+                        <circle id="hit-pupil" cx="150" cy="100" r="18" class="hit-box" onclick="handleVisualClick('hit-pupil')" />
+                      </svg>`
+            },
+            {
+                system: "EAR",
+                prompt: "Tap the **Cochlea** (snail-shaped loop).",
+                targetId: "hit-cochlea",
+                svg: `<svg viewBox="0 0 300 200" class="w-full h-64 mx-auto drop-shadow-lg">
+                        <rect x="20" y="80" width="80" height="40" fill="#fca5a5" rx="5"/>
+                        <line x1="100" y1="70" x2="100" y2="130" stroke="#94a3b8" stroke-width="4" />
+                        <path d="M180,100 m-2,0 a2,2 0 1,1 4,0 a6,6 0 1,1 -12,0 a12,12 0 1,1 24,0 a20,20 0 1,1 -40,0 a30,30 0 1,1 60,0" fill="none" stroke="#a5b4fc" stroke-width="8" stroke-linecap="round" />
+                        <path d="M180,100 m-2,0 a2,2 0 1,1 4,0 a6,6 0 1,1 -12,0 a12,12 0 1,1 24,0 a20,20 0 1,1 -40,0 a30,30 0 1,1 60,0" fill="none" stroke="#6366f1" stroke-width="3" stroke-linecap="round" />
+                        
+                        <rect id="hit-canal" x="20" y="80" width="80" height="40" class="hit-box" onclick="handleVisualClick('hit-canal')" />
+                        <circle id="hit-cochlea" cx="180" cy="100" r="40" class="hit-box" onclick="handleVisualClick('hit-cochlea')" />
+                      </svg>`
+            }
+        ];
+
+        // 3. WORD BUILDER
+        const dbBuilder = [
+            { prompt: "Build term: 'Repair of Eardrum'", parts: ["Tympan", "o", "plasty", "itis", "ectomy"], answer: "Tympanoplasty" },
+            { prompt: "Build term: 'Removal of Labyrinth'", parts: ["Labyrinth", "ectomy", "otomy", "plasty"], answer: "Labyrinthectomy" },
+            { prompt: "Build term: 'Measure of Hearing'", parts: ["Audio", "meter", "gram", "scope"], answer: "Audiometer" },
+            { prompt: "Build term: 'Surgical incision of Eardrum'", parts: ["Myring", "otomy", "ectomy", "itis"], answer: "Myringotomy" }
+        ];
+
+        // 4. TRIAGE (Sorting)
+        const dbTriage = [
+            { text: "Stapedectomy", cat: "EAR" },
+            { text: "Dacryocystitis", cat: "EYE" },
+            { text: "Cerumen", cat: "EAR" },
+            { text: "Ophthalmologist", cat: "EYE" },
+            { text: "Tinnitus", cat: "EAR" },
+            { text: "Canthus", cat: "EYE" },
+            { text: "Myringotomy", cat: "EAR" },
+            { text: "Blepharitis", cat: "EYE" }
+        ];
+
+        // 5. CLINICAL CASES
+        const dbCases = [
+            {
+                title: "Pediatric ENT",
+                desc: "Child with chronic ear infections and fluid accumulation.",
+                steps: [
+                    { prompt: "We need to incise the eardrum to drain fluid. This is a:", options: ["Myringotomy", "Otoplasty", "Biopsy"], answer: "Myringotomy" },
+                    { prompt: "We will insert 'ventilating tubes', also called:", options: ["Tympanostomy tubes", "Stents", "Catheters"], answer: "Tympanostomy tubes" },
+                    { prompt: "These tubes are placed into the:", options: ["Eardrum", "Cochlea", "Pinna"], answer: "Eardrum" }
+                ]
+            },
+            {
+                title: "Audiology Consult",
+                desc: "Patient has profound sensorineural hearing loss.",
+                steps: [
+                    { prompt: "Standard aids don't work. We suggest a device stimulating the nerve directly:", options: ["Cochlear Implant", "Bone Anchor", "Amplifier"], answer: "Cochlear Implant" },
+                    { prompt: "This device bypasses damaged parts of the:", options: ["Ear", "Brain", "Eye"], answer: "Ear" },
+                    { prompt: "Patient also reports spinning sensation, known as:", options: ["Vertigo", "Nausea", "Syncope"], answer: "Vertigo" }
+                ]
+            }
+        ];
+
+        // --- GAME ENGINE ---
+        let state = {
+            score: 0,
+            lives: 3,
+            qCount: 0,
+            currentQ: null,
+            builderSel: [],
+            isLocked: false,
+            startTime: Date.now(),
+            timerRef: null,
+            // Pools for randomization
+            poolStandard: [],
+            poolVisual: [],
+            poolBuilder: [],
+            poolTriage: [],
+            poolCases: []
+        };
+
+        function startGame() {
+            state.score = 0;
+            state.lives = 3;
+            state.qCount = 0;
+            state.startTime = Date.now();
+            
+            // Clone and Shuffle Database
+            state.poolStandard = [...dbStandard].sort(() => Math.random() - 0.5);
+            state.poolVisual = [...dbVisual].sort(() => Math.random() - 0.5);
+            state.poolBuilder = [...dbBuilder].sort(() => Math.random() - 0.5);
+            state.poolTriage = [...dbTriage].sort(() => Math.random() - 0.5);
+            state.poolCases = [...dbCases].sort(() => Math.random() - 0.5);
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            
+            clearInterval(state.timerRef);
+            state.timerRef = setInterval(updateTime, 1000);
+            
+            updateHUD();
+            nextPhase();
+        }
+
+        function updateTime() {
+            const diff = Math.floor((Date.now() - state.startTime) / 1000);
+            const m = Math.floor(diff/60).toString().padStart(2,'0');
+            const s = (diff%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        function nextPhase() {
+            if(state.lives <= 0) return gameOver('died');
+            
+            state.qCount++;
+            document.getElementById('q-count').innerText = state.qCount;
+            state.isLocked = false;
+
+            // --- GAME LOOP LOGIC ---
+            // 1. Every 6th question -> Triage (Speed Round)
+            // 2. Every 5th question (if not 6th) -> Boss Case
+            // 3. Otherwise -> Random mix of Standard, Visual, Builder
+
+            if (state.qCount % 6 === 0) {
+                startTriage();
+            } else if (state.qCount % 5 === 0) {
+                renderCase();
+            } else {
+                // Replenish pools if empty
+                if (state.poolStandard.length === 0) state.poolStandard = [...dbStandard].sort(() => Math.random() - 0.5);
+                if (state.poolVisual.length === 0) state.poolVisual = [...dbVisual].sort(() => Math.random() - 0.5);
+                if (state.poolBuilder.length === 0) state.poolBuilder = [...dbBuilder].sort(() => Math.random() - 0.5);
+
+                const r = Math.random();
+                if (r < 0.5) renderStandard();
+                else if (r < 0.75) renderVisual();
+                else renderBuilder();
+            }
+        }
+
+        // --- RENDERERS ---
+
+        function renderStandard() {
+            const q = state.poolStandard.pop();
+            const c = document.getElementById('card-container');
+            
+            c.innerHTML = `
+                <div class="fade-in w-full">
+                    <div class="text-xs font-bold text-sky-400 mb-2 uppercase tracking-wider">${q.category}</div>
+                    <h2 class="text-xl font-bold text-white mb-6">${q.prompt}</h2>
+                    <div class="grid gap-3" id="opt-grid"></div>
+                </div>
+            `;
+
+            const grid = document.getElementById('opt-grid');
+            const opts = [...q.options].sort(() => Math.random() - 0.5);
+            opts.forEach(o => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl bg-slate-700 hover:bg-sky-600 transition-all text-slate-100 font-medium btn-option border border-slate-600";
+                btn.innerText = o;
+                btn.onclick = () => handleResult(o === q.answer, q.feedback);
+                grid.appendChild(btn);
+            });
+        }
+
+        function renderVisual() {
+            const q = state.poolVisual.pop();
+            state.currentQ = q; 
+            
+            const c = document.getElementById('card-container');
+            c.innerHTML = `
+                <div class="fade-in w-full text-center">
+                    <div class="text-xs font-bold text-sky-400 mb-2 uppercase tracking-wider">ANATOMY SCAN: ${q.system}</div>
+                    <h2 class="text-xl font-bold text-white mb-6">${q.prompt}</h2>
+                    <div class="bg-slate-900 rounded-xl p-4 relative shadow-inner inline-block border border-slate-700">
+                        ${q.svg}
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Click the diagram to identify.</p>
+                </div>
+            `;
+        }
+
+        window.handleVisualClick = function(id) {
+            if(state.isLocked) return;
+            const target = document.getElementById(id);
+            const q = state.currentQ;
+
+            if(id === q.targetId) {
+                target.classList.add('hit-box-correct');
+                handleResult(true, "Structure Identified!");
+            } else {
+                target.classList.add('hit-box-wrong');
+                handleResult(false, "Incorrect structure.");
+            }
+        }
+
+        function renderBuilder() {
+            const q = state.poolBuilder.pop();
+            state.currentQ = q;
+            state.builderSel = [];
+
+            const c = document.getElementById('card-container');
+            c.innerHTML = `
+                <div class="fade-in w-full">
+                    <div class="text-xs font-bold text-purple-400 mb-2 uppercase tracking-wider">TERMINOLOGY BUILDER</div>
+                    <h2 class="text-xl font-bold text-white mb-2">${q.prompt}</h2>
+                    
+                    <div id="stage" class="bg-slate-900 border-2 border-dashed border-slate-600 rounded-xl h-16 flex items-center justify-center gap-2 mb-6 font-mono text-sky-300 text-lg">
+                        <span class="text-slate-600 text-sm italic">Tap blocks to build...</span>
+                    </div>
+
+                    <div id="pool" class="flex flex-wrap gap-2 justify-center mb-6"></div>
+
+                    <div class="flex gap-2">
+                        <button onclick="resetBuilder()" class="flex-1 bg-slate-700 text-slate-300 py-3 rounded-lg font-bold hover:bg-slate-600 transition-colors">Clear</button>
+                        <button onclick="submitBuilder()" class="flex-[2] bg-sky-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-sky-500 transition-colors">Submit Diagnosis</button>
+                    </div>
+                </div>
+            `;
+
+            renderBuilderPool(q);
+        }
+
+        function renderBuilderPool(q) {
+            const pool = document.getElementById('pool');
+            pool.innerHTML = ''; // Clear existing
+            const parts = [...q.parts].sort(() => Math.random() - 0.5);
+            parts.forEach(p => {
+                const b = document.createElement('button');
+                b.className = "bg-slate-700 text-white px-4 py-2 rounded font-bold border-b-4 border-slate-900 active:border-b-0 active:translate-y-1 transition-all hover:bg-slate-600";
+                b.innerText = p;
+                b.onclick = () => addBlock(p, b);
+                pool.appendChild(b);
+            });
+        }
+
+        window.addBlock = function(txt, btn) {
+            state.builderSel.push(txt);
+            btn.classList.add('opacity-50', 'pointer-events-none');
+            
+            const stage = document.getElementById('stage');
+            // Remove placeholder if it exists
+            if (stage.querySelector('.italic')) stage.innerHTML = '';
+            
+            const span = document.createElement('span');
+            span.className = "bg-slate-800 px-3 py-1 rounded border border-slate-600";
+            span.innerText = txt;
+            stage.appendChild(span);
+        }
+
+        window.resetBuilder = function() { 
+            state.builderSel = [];
+            const stage = document.getElementById('stage');
+            stage.innerHTML = '<span class="text-slate-600 text-sm italic">Tap blocks to build...</span>';
+            // Re-render buttons to make them active again
+            renderBuilderPool(state.currentQ); 
+        } 
+
+        window.submitBuilder = function() {
+            const attempt = state.builderSel.join('').toLowerCase();
+            const correct = state.currentQ.answer.toLowerCase();
+            if(attempt === correct) handleResult(true, `Correct! The term is ${state.currentQ.answer}`);
+            else handleResult(false, `You built '${state.builderSel.join('') || '(nothing)'}'. Needed: ${state.currentQ.answer}`);
+        }
+
+        function startTriage() {
+            // Ensure pool has items
+            if(state.poolTriage.length < 5) state.poolTriage = [...dbTriage].sort(() => Math.random() - 0.5);
+            
+            let count = 0;
+            const max = 4; // Number of triage items per round
+
+            function showItem() {
+                if(count >= max) {
+                    state.score += 200;
+                    // Flash success
+                    const c = document.getElementById('card-container');
+                    c.innerHTML = `<div class="text-center fade-in py-10"><h2 class="text-3xl font-black text-yellow-400">TRIAGE COMPLETE!</h2><p class="text-white mt-4 text-xl">+200 Bonus Points</p></div>`;
+                    setTimeout(nextPhase, 1500);
+                    return;
+                }
+                
+                const item = state.poolTriage.pop();
+                // If we run out mid-round (unlikely with refill logic, but safe), just finish
+                if(!item) { count = max; showItem(); return; }
+
+                const c = document.getElementById('card-container');
+                c.innerHTML = `
+                    <div class="fade-in w-full text-center">
+                        <div class="text-xs font-bold text-yellow-400 mb-8 uppercase tracking-widest animate-pulse">RAPID SORT: ${count+1}/${max}</div>
+                        <h1 class="text-4xl font-black text-white mb-12">${item.text}</h1>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button id="btn-eye" class="bg-blue-600 text-white py-8 rounded-xl font-black text-2xl border-b-8 border-blue-800 active:border-b-0 active:translate-y-2 hover:bg-blue-500 transition-all">EYE</button>
+                            <button id="btn-ear" class="bg-orange-600 text-white py-8 rounded-xl font-black text-2xl border-b-8 border-orange-800 active:border-b-0 active:translate-y-2 hover:bg-orange-500 transition-all">EAR</button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('btn-eye').onclick = () => check(item, 'EYE');
+                document.getElementById('btn-ear').onclick = () => check(item, 'EAR');
+            }
+
+            function check(item, choice) {
+                if(item.cat === choice) {
+                    state.score += 50;
+                    count++;
+                    updateHUD();
+                    showItem();
+                } else {
+                    document.body.classList.add('shake');
+                    setTimeout(()=>document.body.classList.remove('shake'), 400);
+                    state.lives--;
+                    updateHUD();
+                    if(state.lives<=0) gameOver('died');
+                    // In Triage, we give them a split second to see they failed, then move on or fail game
+                    // But to keep flow fast, we just deduct life and move next
+                    count++;
+                    showItem();
+                }
+            }
+            showItem();
+        }
+
+        function renderCase() {
+            if(state.poolCases.length === 0) state.poolCases = [...dbCases].sort(() => Math.random() - 0.5);
+            const cCase = state.poolCases.pop();
+            let step = 0;
+
+            function renderStep() {
+                const s = cCase.steps[step];
+                const c = document.getElementById('card-container');
+                c.innerHTML = `
+                    <div class="fade-in w-full">
+                        <div class="bg-red-900/40 border border-red-500/30 p-4 rounded-xl mb-6">
+                            <h2 class="text-lg font-bold text-red-200 flex items-center gap-2"><span>🚨</span> ${cCase.title}</h2>
+                            <p class="text-sm text-red-100 opacity-90 mt-1">${cCase.desc}</p>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-6">Step ${step+1}: ${s.prompt}</h3>
+                        <div class="grid gap-3" id="case-opts"></div>
+                    </div>
+                `;
+                
+                const grid = document.getElementById('case-opts');
+                s.options.forEach(o => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-medium border border-slate-600 transition-all";
+                    btn.innerText = o;
+                    btn.onclick = () => {
+                        if(o === s.answer) {
+                            step++;
+                            if(step >= cCase.steps.length) {
+                                state.score += 300;
+                                updateHUD();
+                                const c = document.getElementById('card-container');
+                                c.innerHTML = `<div class="text-center fade-in py-10"><h2 class="text-3xl font-black text-green-400">CASE RESOLVED</h2><p class="text-white mt-4 text-xl">+300 Points</p></div>`;
+                                setTimeout(nextPhase, 1500);
+                            } else renderStep();
+                        } else {
+                            state.lives--;
+                            updateHUD();
+                            // Flash red but don't use alert()
+                            document.body.classList.add('shake');
+                            setTimeout(()=>document.body.classList.remove('shake'), 400);
+                            
+                            if(state.lives<=0) gameOver('died');
+                            // In Boss mode, must get it right to proceed
+                        }
+                    };
+                    grid.appendChild(btn);
+                });
+            }
+            renderStep();
+        }
+
+        // --- UTILS ---
+        function handleResult(isCorrect, feedback) {
+            state.isLocked = true;
+            const c = document.getElementById('card-container');
+            
+            if(isCorrect) {
+                state.score += 100;
+                c.innerHTML = `
+                    <div class="text-center fade-in py-10 flex flex-col items-center">
+                        <div class="text-6xl mb-6">✅</div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Excellent!</h2>
+                        <p class="text-slate-300 mb-8 text-lg">${feedback || "Correct."}</p>
+                        <button onclick="nextPhase()" class="bg-white text-sky-900 px-10 py-4 rounded-full font-bold shadow-lg hover:scale-105 transition-transform text-lg">Next Question</button>
+                    </div>
+                `;
+            } else {
+                state.lives--;
+                c.innerHTML = `
+                    <div class="text-center fade-in py-10 flex flex-col items-center">
+                        <div class="text-6xl mb-6">❌</div>
+                        <h2 class="text-3xl font-bold text-red-400 mb-2">Incorrect</h2>
+                        <p class="text-slate-300 mb-8 text-lg">${feedback}</p>
+                        <button onclick="nextPhase()" class="bg-slate-700 text-white px-10 py-4 rounded-full font-bold hover:bg-slate-600 transition-colors text-lg">Continue</button>
+                    </div>
+                `;
+            }
+            updateHUD();
+            if(state.lives<=0) gameOver('died');
+        }
+
+        function updateHUD() {
+            document.getElementById('score-display').innerText = state.score;
+            document.getElementById('lives-container').innerHTML = '♥'.repeat(state.lives);
+        }
+
+        function gameOver(reason) {
+            clearInterval(state.timerRef);
+            document.getElementById('game-ui').classList.add('hidden');
+            const s = document.getElementById('start-screen');
+            s.classList.remove('hidden');
+            
+            const title = reason === 'manual' ? "Shift Ended" : "Shift Over";
+            s.innerHTML = `
+                <div class="mb-4 text-6xl">${reason==='manual'?'📋':'💀'}</div>
+                <h1 class="text-3xl font-bold text-white mb-2">${title}</h1>
+                <p class="text-xl text-sky-400 mb-8 font-bold">Final Score: ${state.score}</p>
+                <div class="bg-slate-900 p-4 rounded-lg mb-6 text-sm text-slate-400 border border-slate-700">
+                    Questions Processed: ${state.qCount}
+                </div>
+                <button onclick="location.reload()" class="bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform">Start New Shift</button>
+            `;
+        }
+    </script>
+</body>
+</html>
