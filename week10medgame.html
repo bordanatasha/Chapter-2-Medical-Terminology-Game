@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 10: Nervous System and Mental Health</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        .red-flash { animation: flashRed 0.5s; }
+        @keyframes flashRed { 0% { background-color: #7f1d1d; } 100% { background-color: transparent; } }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300">
+
+    <div id="start-screen" class="text-center max-w-lg w-full fade-in">
+        <div class="mb-6 text-7xl animate-pulse">🧠</div>
+        <h1 class="text-3xl md:text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Week 10</h1>
+        <h2 class="text-xl text-slate-300 mb-8 font-semibold tracking-wide uppercase">Nervous System and Mental Health</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-8 text-left text-sm text-slate-500">
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 flex items-center gap-2"><span>📌</span> Multiple Choice</div>
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 flex items-center gap-2"><span>⌨️</span> Fill in the Blank</div>
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 flex items-center gap-2"><span>🔗</span> Term Matching</div>
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 flex items-center gap-2"><span>🚨</span> Case Studies</div>
+        </div>
+
+        <button onclick="startGame()" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-violet-900/50 transition-all transform hover:scale-[1.02]">
+            Begin Shift
+        </button>
+    </div>
+
+    <div id="game-ui" class="hidden w-full max-w-2xl relative">
+        
+        <header class="flex justify-between items-start mb-6 px-2">
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="text-xs font-bold text-violet-400 uppercase tracking-widest">Score</div>
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-800 px-2 py-0.5 rounded">Time: <span id="timer-display" class="text-slate-300 font-mono">00:00</span></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="streak-icon" class="text-2xl opacity-50 grayscale transition-all">🔥</span>
+                    <span id="score-display" class="text-3xl font-black text-white">0</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-col items-end gap-3">
+                <button onclick="gameOver('manual')" class="text-[10px] font-bold text-red-400 border border-red-900/50 hover:bg-red-900/20 px-3 py-1.5 rounded transition-colors uppercase tracking-widest flex items-center gap-1">
+                    <span>🛑</span> End Shift
+                </button>
+
+                <div class="text-right">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Vitals</div>
+                    <div class="flex gap-1" id="lives-container"></div>
+                </div>
+            </div>
+        </header>
+
+        <main id="card-container" class="bg-slate-800/50 backdrop-blur-md border border-slate-700 rounded-3xl p-6 md:p-8 shadow-2xl min-h-[480px] flex flex-col justify-center relative overflow-hidden transition-all">
+            </main>
+        
+        <div class="flex justify-between items-center mt-4 px-2">
+            <p class="text-slate-600 text-xs font-medium">Question <span id="q-count">1</span></p>
+            <div id="feedback-toast" class="text-xs font-bold text-violet-400 opacity-0 transition-opacity">Select an answer...</div>
+        </div>
+    </div>
+
+    <script>
+        // --- MASTER CONTENT DATABASE (Chapter 10 Slides) ---
+        
+        const masterDatabase = [
+            // === ANATOMY: BASICS & CELLS ===
+            { id: "a1", type: "choice", category: "Anatomy", prompt: "Which part of the neuron carries impulses TOWARD the cell body?", options: ["Dendrites", "Axon", "Myelin", "Synapse"], answer: "Dendrites", feedback: "Correct. Dendrites receive stimuli; Axons carry them away." },
+            { id: "a2", type: "choice", category: "Anatomy", prompt: "The space between two neurons is called the:", options: ["Synapse", "Plexus", "Ganglion", "Tract"], answer: "Synapse", feedback: "Correct. Neurotransmitters must cross the synapse." },
+            { id: "a3", type: "choice", category: "Anatomy", prompt: "Which glial cells form the blood-brain barrier?", options: ["Astrocytes", "Microglia", "Oligodendrocytes", "Schwann Cells"], answer: "Astrocytes", feedback: "Yes. Astrocytes connect neurons to blood vessels." },
+            { id: "a4", type: "blank", category: "Anatomy", prompt: "The protective covering made of glial cells that insulates axons is the:", answer: "Myelin Sheath", hint: "M_ _l_n Sheath", feedback: "Correct. Myelin makes up the 'White Matter'." },
+            { id: "a5", type: "match", category: "Nerves", prompt: "Match the Nerve Term to Definition:", pairs: [{id:1, term:"Afferent", def:"Sensory (Toward Brain)"}, {id:2, term:"Efferent", def:"Motor (Away from Brain)"}, {id:3, term:"Ganglion", def:"Cluster outside CNS"}] },
+            
+            // === ANATOMY: BRAIN PARTS ===
+            { id: "a6", type: "choice", category: "Anatomy", prompt: "Which lobe controls vision?", options: ["Occipital", "Frontal", "Temporal", "Parietal"], answer: "Occipital", feedback: "Correct. Occipital is at the back of the head." },
+            { id: "a7", type: "choice", category: "Anatomy", prompt: "Which part of the brain coordinates muscle activity and balance?", options: ["Cerebellum", "Cerebrum", "Brainstem", "Thalamus"], answer: "Cerebellum", feedback: "Correct. Cerebellum means 'Little Brain'." },
+            { id: "a8", type: "choice", category: "Anatomy", prompt: "The largest part of the brain responsible for thought/memory is:", options: ["Cerebrum", "Cerebellum", "Pons", "Medulla"], answer: "Cerebrum", feedback: "Yes. The cerebrum is the uppermost layer." },
+            { id: "a9", type: "match", category: "Brain Stem", prompt: "Match the Brain Stem Part:", pairs: [{id:10, term:"Midbrain", def:"Conduction pathway"}, {id:11, term:"Pons", def:"Nerve cell crossing"}, {id:12, term:"Medulla", def:"Vital functions (Heart/Lung)"}] },
+            { id: "a10", type: "blank", category: "Anatomy", prompt: "Which structure connects the two cerebral hemispheres?", answer: "Corpus Callosum", hint: "C_rp_s C_ll_s_m", feedback: "Correct. It allows communication between left and right sides." },
+
+            // === ANATOMY: MENINGES ===
+            { id: "m1", type: "match", category: "Meninges", prompt: "Order the Meninges (Outer to Inner):", pairs: [{id:20, term:"Dura Mater", def:"Outer (Tough)"}, {id:21, term:"Arachnoid", def:"Middle (Web-like)"}, {id:22, term:"Pia Mater", def:"Inner (Delicate)"}] },
+            { id: "m2", type: "choice", category: "Anatomy", prompt: "Where is Cerebrospinal Fluid (CSF) located?", options: ["Subarachnoid space", "Epidural space", "Subdural space", "Inside the Dura"], answer: "Subarachnoid space", feedback: "Correct. It cushions the brain within the arachnoid membrane." },
+
+            // === PATHOLOGY: GENERAL ===
+            { id: "p1", type: "choice", category: "Pathology", prompt: "A 'bruise' to the brain tissue is known as a:", options: ["Cerebral Contusion", "Concussion", "CVA", "Hydrocephalus"], answer: "Cerebral Contusion", feedback: "Correct. A contusion involves swelling/bleeding. Concussion is shaking." },
+            { id: "p2", type: "blank", category: "Pathology", prompt: "Inflammation of the brain tissue itself is called:", answer: "Encephalitis", hint: "Encephal/o + itis", feedback: "Correct. Not to be confused with Meningitis." },
+            { id: "p3", type: "choice", category: "Pathology", prompt: "Syncope is the medical term for:", options: ["Fainting", "Headache", "Dizziness", "Memory Loss"], answer: "Fainting", feedback: "Correct. Caused by decreased blood flow to the brain." },
+            { id: "p4", type: "choice", category: "Pathology", prompt: "A collection of blood trapped in the tissues of the brain is a:", options: ["Hematoma", "Aneurysm", "Tumor", "Cyst"], answer: "Hematoma", feedback: "Correct. Can be epidural, subdural, or intracerebral." },
+            
+            // === PATHOLOGY: STROKE & DISORDERS ===
+            { id: "p5", type: "choice", category: "Pathology", prompt: "A TIA (Transient Ischemic Attack) is often called a:", options: ["Mini-stroke", "Major stroke", "Seizure", "Migraine"], answer: "Mini-stroke", feedback: "Correct. It is a temporary interruption of blood supply." },
+            { id: "p6", type: "match", category: "Strokes", prompt: "Match the Stroke Type:", pairs: [{id:30, term:"Ischemic Stroke", def:"Blocked Artery (Clot)"}, {id:31, term:"Hemorrhagic Stroke", def:"Leaking Blood Vessel"}, {id:32, term:"Aphasia", def:"Loss of Speech"}] },
+            { id: "p7", type: "choice", category: "Pathology", prompt: "Which condition involves 'demyelination' or destruction of the myelin sheath?", options: ["Multiple Sclerosis", "Parkinson's", "ALS", "Bell's Palsy"], answer: "Multiple Sclerosis", feedback: "Correct. MS is an autoimmune attack on myelin." },
+            { id: "p8", type: "choice", category: "Pathology", prompt: "ALS (Lou Gehrig's Disease) attacks which neurons?", options: ["Motor Neurons", "Sensory Neurons", "Interneurons", "Glial Cells"], answer: "Motor Neurons", feedback: "Correct. Leads to progressive muscle weakness." },
+
+            // === PATHOLOGY: NERVES ===
+            { id: "p9", type: "choice", category: "Pathology", prompt: "Temporary paralysis of the 7th cranial nerve (facial droop) is:", options: ["Bell's Palsy", "Trigeminal Neuralgia", "Sciatica", "Guillain-Barre"], answer: "Bell's Palsy", feedback: "Correct. Often looks like a stroke but affects only the face muscles." },
+            { id: "p10", type: "choice", category: "Pathology", prompt: "Inflammation of the sciatic nerve causing leg pain is:", options: ["Sciatica", "Radiculitis", "Neuritis", "Causalgia"], answer: "Sciatica", feedback: "Correct. Often caused by pressure on the nerve root." },
+            
+            // === MENTAL HEALTH ===
+            { id: "mh1", type: "choice", category: "Mental Health", prompt: "Excessive fear of heights is:", options: ["Acrophobia", "Agoraphobia", "Claustrophobia", "Social Phobia"], answer: "Acrophobia", feedback: "Correct. Acro- means high/top." },
+            { id: "mh2", type: "match", category: "Mental Health", prompt: "Match Disorder to Description:", pairs: [{id:40, term:"Kleptomania", def:"Urge to steal"}, {id:41, term:"Pyromania", def:"Urge to set fires"}, {id:42, term:"Trichotillomania", def:"Urge to pull hair"}] },
+            { id: "mh3", type: "choice", category: "Mental Health", prompt: "A false personal belief maintained despite proof to the contrary is a:", options: ["Delusion", "Hallucination", "Obsession", "Compulsion"], answer: "Delusion", feedback: "Correct. Hallucinations are sensory; Delusions are thoughts." },
+            { id: "mh4", type: "choice", category: "Mental Health", prompt: "Which condition involves cycles of severe mood changes (High/Low)?", options: ["Bipolar Disorder", "Depression", "Anxiety", "Schizophrenia"], answer: "Bipolar Disorder", feedback: "Correct. Cycles of Mania and Depression." },
+
+            // === MEDICATIONS ===
+            { id: "rx1", type: "choice", category: "Medications", prompt: "Which drug temporarily relieves anxiety and tension?", options: ["Anxiolytic", "Antipsychotic", "Stimulant", "Hypnotic"], answer: "Anxiolytic", feedback: "Correct. Also known as antianxiety drugs." },
+            { id: "rx2", type: "choice", category: "Medications", prompt: "Drugs used to treat severe disorders of thinking/mood (Schizophrenia) are:", options: ["Antipsychotics", "Antidepressants", "Sedatives", "Anesthetics"], answer: "Antipsychotics", feedback: "Correct. They act against psych/o (mind) symptoms." },
+            { id: "rx3", type: "blank", category: "Medications", prompt: "A drug that produces sleep is called a:", answer: "Hypnotic", hint: "Starts with H", feedback: "Correct. Usually given to treat insomnia." }
+        ];
+
+        // === CASE STUDIES (Boss Battles) ===
+        const cases = [
+            {
+                title: "ER Case: Head Trauma",
+                desc: "19yo male struck in head by baseball. Conscious but confused.",
+                steps: [
+                    { prompt: "Patient has a severe headache and vomiting. We suspect increased ICP. What is ICP?", options: ["Intracranial Pressure", "Intracerebral Pulse", "Internal Carotid Pressure"], answer: "Intracranial Pressure" },
+                    { prompt: "The doctor orders an incision into the skull to relieve pressure. This is a:", options: ["Craniotomy", "Craniectomy", "Cranioplasty"], answer: "Craniotomy" },
+                    { prompt: "The patient is 'lethargic'. This means:", options: ["Lowered level of consciousness", "Hyperactive", "Comatose"], answer: "Lowered level of consciousness" }
+                ]
+            },
+            {
+                title: "Neuro Case: Tremors",
+                desc: "65yo female presents with shuffling gait and pill-rolling tremors.",
+                steps: [
+                    { prompt: "This presentation is classic for:", options: ["Parkinson's Disease", "Alzheimer's Disease", "Multiple Sclerosis"], answer: "Parkinson's Disease" },
+                    { prompt: "This disease is caused by a lack of which neurotransmitter?", options: ["Dopamine", "Serotonin", "Adrenaline"], answer: "Dopamine" },
+                    { prompt: "The patient has 'bradykinesia'. This means:", options: ["Slow movement", "Fast movement", "No movement"], answer: "Slow movement" }
+                ]
+            },
+            {
+                title: "Psych Case: Panic",
+                desc: "Patient arrives hyperventilating, claiming they are 'going to die'.",
+                steps: [
+                    { prompt: "This sudden surge of intense fear is a:", options: ["Panic Attack", "Generalized Anxiety", "Delirium"], answer: "Panic Attack" },
+                    { prompt: "The patient fears being in a crowded place where they can't escape. This is:", options: ["Agoraphobia", "Acrophobia", "Social Phobia"], answer: "Agoraphobia" },
+                    { prompt: "We administer a mild tranquilizer, also known as a:", options: ["Sedative", "Stimulant", "Antidepressant"], answer: "Sedative" }
+                ]
+            }
+        ];
+
+        // --- GAME STATE ---
+        let state = {
+            score: 0,
+            lives: 3,
+            streak: 0,
+            qCount: 0,
+            activeQueue: [],
+            selectedBtn: null,
+            solvedCount: 0,
+            isLocked: false,
+            startTime: 0,
+            timerInterval: null
+        };
+
+        // --- ENGINE ---
+
+        function startGame() {
+            state.score = 0;
+            state.lives = 3;
+            state.streak = 0;
+            state.qCount = 0;
+            
+            // RANDOMIZE: Fresh mix every time
+            state.activeQueue = [...masterDatabase].sort(() => Math.random() - 0.5);
+            
+            // Start Timer
+            state.startTime = Date.now();
+            if(state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(updateTimer, 1000);
+            updateTimer();
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            document.getElementById('game-ui').classList.add('fade-in');
+            
+            updateHUD();
+            nextPhase();
+        }
+
+        function updateTimer() {
+            const delta = Math.floor((Date.now() - state.startTime) / 1000);
+            const m = Math.floor(delta / 60).toString().padStart(2, '0');
+            const s = (delta % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        function nextPhase() {
+            if (state.lives <= 0) return gameOver('died');
+            
+            state.qCount++;
+            document.getElementById('q-count').innerText = state.qCount;
+            state.isLocked = false;
+            setToast("Select an answer...");
+
+            // BOSS TRIGGER: Every 5th Question
+            if (state.qCount % 5 === 0) {
+                renderCaseStudy();
+            } else {
+                if (state.activeQueue.length === 0) {
+                    // Refill if empty
+                    state.activeQueue = [...masterDatabase].sort(() => Math.random() - 0.5);
+                }
+                const q = state.activeQueue.pop(); 
+                renderCard(q);
+            }
+        }
+
+        // --- RENDERERS ---
+
+        function renderCard(q) {
+            const container = document.getElementById('card-container');
+            container.innerHTML = '';
+            
+            const content = document.createElement('div');
+            content.className = "w-full fade-in";
+            
+            content.innerHTML += `
+                <div class="flex justify-between items-center mb-4">
+                    <span class="bg-violet-900/50 text-violet-300 text-xs font-bold px-2 py-1 rounded border border-violet-700/50 uppercase tracking-wider">${q.category}</span>
+                    <span class="text-xs text-slate-500 font-medium uppercase">${q.type === 'match' ? 'Tap Pairs' : q.type === 'blank' ? 'Type Answer' : 'Select One'}</span>
+                </div>
+            `;
+            
+            content.innerHTML += `<h2 class="text-xl font-bold text-white mb-6 leading-relaxed">${q.prompt}</h2>`;
+
+            if (q.type === 'choice') renderChoice(content, q);
+            else if (q.type === 'blank') renderBlank(content, q);
+            else if (q.type === 'match') renderMatching(content, q);
+
+            container.appendChild(content);
+        }
+
+        function renderChoice(parent, q) {
+            const grid = document.createElement('div');
+            grid.className = "grid grid-cols-1 gap-3";
+            
+            const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+            
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl bg-slate-700/50 hover:bg-violet-600/80 border border-slate-600 hover:border-violet-400 transition-all font-medium text-slate-100";
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    if(!state.isLocked) handleResult(opt === q.answer, q);
+                };
+                grid.appendChild(btn);
+            });
+            parent.appendChild(grid);
+        }
+
+        function renderBlank(parent, q) {
+            const input = document.createElement('input');
+            input.type = "text";
+            input.className = "w-full p-4 bg-slate-900 border border-slate-600 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none text-lg mb-4 text-white placeholder-slate-600";
+            input.placeholder = "Type answer here...";
+            
+            const btn = document.createElement('button');
+            btn.className = "w-full bg-violet-600 text-white font-bold py-3 rounded-xl hover:bg-violet-500 shadow-lg mt-2";
+            btn.innerText = "Submit Answer";
+            btn.onclick = () => {
+                if(!state.isLocked) {
+                    const isCorrect = input.value.toLowerCase().trim() === q.answer.toLowerCase().trim();
+                    handleResult(isCorrect, q);
+                }
+            };
+            if(q.hint) parent.innerHTML += `<p class="text-slate-400 text-sm mb-2 italic">💡 Hint: ${q.hint}</p>`;
+            parent.appendChild(input);
+            parent.appendChild(btn);
+        }
+
+        // --- MATCHING LOGIC (Robust) ---
+        function renderMatching(parent, q) {
+            state.selectedBtn = null;
+            state.solvedCount = 0;
+            setToast("Tap a term, then tap its definition.");
+            
+            const grid = document.createElement('div');
+            grid.className = "grid grid-cols-2 gap-4";
+
+            let allItems = [];
+            q.pairs.forEach(pair => {
+                allItems.push({ text: pair.term, pairId: pair.id, type: 'term' });
+                allItems.push({ text: pair.def, pairId: pair.id, type: 'def' });
+            });
+
+            const terms = allItems.filter(i => i.type === 'term').sort(() => Math.random() - 0.5);
+            const defs = allItems.filter(i => i.type === 'def').sort(() => Math.random() - 0.5);
+
+            const col1 = document.createElement('div');
+            col1.className = "flex flex-col gap-3";
+            terms.forEach(item => col1.appendChild(createMatchBtn(item, q)));
+
+            const col2 = document.createElement('div');
+            col2.className = "flex flex-col gap-3";
+            defs.forEach(item => col2.appendChild(createMatchBtn(item, q)));
+
+            grid.appendChild(col1);
+            grid.appendChild(col2);
+            parent.appendChild(grid);
+        }
+
+        function createMatchBtn(item, q) {
+            const btn = document.createElement('button');
+            btn.className = "match-btn w-full p-3 text-sm rounded-lg bg-slate-700 border border-slate-600 text-slate-200 transition-all text-center h-20 flex items-center justify-center font-medium select-none active:scale-95";
+            btn.innerText = item.text;
+            btn.dataset.pairId = item.pairId;
+            btn.dataset.type = item.type;
+            btn.onclick = () => handleMatchClick(btn, q);
+            return btn;
+        }
+
+        function handleMatchClick(clickedBtn, q) {
+            if (state.isLocked) return;
+            if (clickedBtn.classList.contains('opacity-25')) return;
+
+            if (!state.selectedBtn) {
+                state.selectedBtn = clickedBtn;
+                highlightBtn(clickedBtn, true);
+                return;
+            }
+
+            if (state.selectedBtn === clickedBtn) {
+                highlightBtn(clickedBtn, false);
+                state.selectedBtn = null;
+                return;
+            }
+
+            // Switch selection if same column/type
+            if (state.selectedBtn.dataset.type === clickedBtn.dataset.type) {
+                highlightBtn(state.selectedBtn, false);
+                state.selectedBtn = clickedBtn;
+                highlightBtn(clickedBtn, true);
+                return;
+            }
+
+            // Match attempt
+            const firstBtn = state.selectedBtn;
+            const secondBtn = clickedBtn;
+            
+            if (firstBtn.dataset.pairId === secondBtn.dataset.pairId) {
+                markMatched(firstBtn);
+                markMatched(secondBtn);
+                state.selectedBtn = null;
+                state.solvedCount++;
+                setToast("✅ Correct Match!");
+
+                if (state.solvedCount === 3) {
+                    state.isLocked = true;
+                    setTimeout(() => handleResult(true, q), 600);
+                }
+            } else {
+                state.isLocked = true; 
+                setToast("❌ Try Again!");
+                highlightError(secondBtn, true);
+                highlightError(firstBtn, true);
+                
+                setTimeout(() => {
+                    highlightBtn(firstBtn, false);
+                    highlightError(secondBtn, false);
+                    highlightError(firstBtn, false);
+                    state.selectedBtn = null;
+                    loseLife();
+                    state.isLocked = false;
+                    setToast("Tap a term, then tap its definition.");
+                    if (state.lives <= 0) gameOver('died');
+                }, 800);
+            }
+        }
+
+        function highlightBtn(btn, isActive) {
+            if (isActive) {
+                btn.className = "match-btn w-full p-3 text-sm rounded-lg bg-violet-600 border-2 border-violet-400 text-white shadow-lg shadow-violet-900/50 transform scale-105 transition-all text-center h-20 flex items-center justify-center font-bold z-10";
+            } else {
+                btn.className = "match-btn w-full p-3 text-sm rounded-lg bg-slate-700 border border-slate-600 text-slate-200 transition-all text-center h-20 flex items-center justify-center font-medium select-none active:scale-95";
+            }
+        }
+
+        function highlightError(btn, isActive) {
+            if (isActive) {
+                btn.className = "match-btn w-full p-3 text-sm rounded-lg bg-red-600 border-2 border-red-300 text-white transition-all text-center h-20 flex items-center justify-center font-bold shake z-20";
+            } else {
+                 btn.className = "match-btn w-full p-3 text-sm rounded-lg bg-slate-700 border border-slate-600 text-slate-200 transition-all text-center h-20 flex items-center justify-center font-medium select-none active:scale-95";
+            }
+        }
+
+        function markMatched(btn) {
+            btn.className = "w-full p-3 text-sm rounded-lg bg-emerald-600 border border-emerald-400 text-white text-center h-20 flex items-center justify-center font-bold opacity-40 cursor-default scale-95 transition-all";
+            btn.innerHTML = btn.innerText + " ✅";
+        }
+
+        // --- SHARED HANDLERS ---
+
+        function handleResult(isCorrect, q) {
+            state.isLocked = true;
+            const container = document.getElementById('card-container');
+            
+            if (isCorrect) {
+                state.score += 100 + (state.streak * 20);
+                state.streak++;
+                
+                container.innerHTML = `
+                    <div class="text-center fade-in py-8">
+                        <div class="text-6xl mb-4">✅</div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Excellent!</h2>
+                        <p class="text-slate-300 mb-6 max-w-sm mx-auto">${q.feedback || "Correct."}</p>
+                        <button onclick="nextPhase()" class="bg-white text-violet-900 px-8 py-3 rounded-full font-bold hover:bg-slate-200 transition-all shadow-lg">Next</button>
+                    </div>
+                `;
+            } else {
+                loseLife();
+                state.streak = 0;
+                if (state.lives > 0) {
+                    container.innerHTML = `
+                        <div class="text-center fade-in py-8">
+                            <div class="text-6xl mb-4">❌</div>
+                            <h2 class="text-2xl font-bold text-red-400 mb-2">Incorrect</h2>
+                            <p class="text-slate-300 mb-2">Correct Answer: <strong>${q.answer || 'See below'}</strong></p>
+                            <p class="text-slate-500 text-sm mb-6">${q.feedback || ''}</p>
+                            <button onclick="nextPhase()" class="bg-slate-700 text-white px-8 py-3 rounded-full font-bold border border-slate-500 hover:bg-slate-600">Continue</button>
+                        </div>
+                    `;
+                } else {
+                    gameOver('died');
+                }
+            }
+            updateHUD();
+        }
+
+        function renderCaseStudy() {
+            setToast("Emergency Case Study!");
+            const caseData = cases[Math.floor(Math.random() * cases.length)];
+            let stepIndex = 0;
+            
+            const container = document.getElementById('card-container');
+            container.innerHTML = `
+                <div class="text-center fade-in py-8">
+                    <div class="inline-block bg-red-900/30 p-4 rounded-full mb-4 border border-red-500/30 animate-pulse"><span class="text-4xl">🚨</span></div>
+                    <h2 class="text-2xl font-bold text-red-400 mb-2">${caseData.title}</h2>
+                    <p class="text-slate-300 mb-8">${caseData.desc}</p>
+                    <button id="start-case-btn" class="bg-red-600 text-white px-8 py-3 rounded-full font-bold hover:bg-red-500 transition-all shadow-lg shadow-red-900/50">Start Evaluation</button>
+                </div>
+            `;
+            document.getElementById('start-case-btn').onclick = () => showCaseStep(caseData, stepIndex);
+        }
+
+        function showCaseStep(caseData, index) {
+            const step = caseData.steps[index];
+            const container = document.getElementById('card-container');
+            container.innerHTML = '';
+            
+            const content = document.createElement('div');
+            content.className = "w-full fade-in";
+            content.innerHTML = `
+                <div class="flex justify-between mb-4"><span class="text-red-400 font-bold text-xs uppercase">Step ${index + 1} of ${caseData.steps.length}</span></div>
+                <h3 class="text-xl font-bold text-white mb-6 border-l-4 border-red-500 pl-4">${step.prompt}</h3>
+            `;
+            
+            const grid = document.createElement('div');
+            grid.className = "grid grid-cols-1 gap-3";
+            step.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-red-400 hover:bg-slate-700/80 transition-all font-medium text-slate-200";
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    if (opt === step.answer) {
+                        if (index + 1 < caseData.steps.length) {
+                            showCaseStep(caseData, index + 1);
+                        } else {
+                            state.score += 300;
+                            updateHUD();
+                            container.innerHTML = `
+                                <div class="text-center fade-in py-8">
+                                    <div class="text-6xl mb-4">🏆</div>
+                                    <h2 class="text-2xl font-bold text-green-400 mb-2">Case Resolved</h2>
+                                    <p class="text-slate-300 mb-6">+300 Points</p>
+                                    <button onclick="nextPhase()" class="bg-green-600 text-white px-8 py-3 rounded-full font-bold hover:bg-green-500">Resume</button>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        loseLife();
+                        updateHUD();
+                        if(state.lives <= 0) gameOver('died');
+                        else alert("Incorrect clinical judgment. Try again.");
+                    }
+                };
+                grid.appendChild(btn);
+            });
+            content.appendChild(grid);
+            container.appendChild(content);
+        }
+
+        function loseLife() {
+            state.lives--;
+            document.body.classList.add('red-flash');
+            document.getElementById('card-container').classList.add('shake');
+            setTimeout(() => {
+                document.body.classList.remove('red-flash');
+                document.getElementById('card-container').classList.remove('shake');
+            }, 500);
+        }
+
+        function updateHUD() {
+            document.getElementById('score-display').innerText = state.score;
+            const container = document.getElementById('lives-container');
+            container.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                container.innerHTML += `<span class="text-2xl ${i < state.lives ? 'text-red-500' : 'text-slate-700'}">♥</span>`;
+            }
+        }
+
+        function setToast(msg) {
+            const t = document.getElementById('feedback-toast');
+            t.innerText = msg;
+            t.classList.remove('opacity-0');
+        }
+
+        function gameOver(reason) {
+            clearInterval(state.timerInterval);
+            const finalTime = document.getElementById('timer-display').innerText;
+            
+            document.getElementById('game-ui').classList.add('hidden');
+            const start = document.getElementById('start-screen');
+            start.classList.remove('hidden');
+            
+            const title = reason === 'manual' ? "Shift Ended" : "Shift Over";
+            const icon = reason === 'manual' ? "📋" : "💀";
+
+            start.innerHTML = `
+                <div class="mb-4 text-6xl">${icon}</div>
+                <h1 class="text-3xl font-bold text-white mb-2">${title}</h1>
+                
+                <div class="grid grid-cols-2 gap-4 w-full mb-6">
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Time</div>
+                        <div class="text-2xl font-bold text-white font-mono">${finalTime}</div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Questions</div>
+                        <div class="text-2xl font-bold text-violet-400">${state.qCount}</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-xl mb-8 border border-slate-700 w-full">
+                    <div class="text-slate-500 uppercase text-xs tracking-widest mb-1">Total Score</div>
+                    <div class="text-4xl font-black text-white">${state.score}</div>
+                </div>
+
+                <button onclick="startGame()" class="w-full bg-slate-600 text-white font-bold py-4 rounded-xl hover:bg-slate-500">Restart Shift</button>
+            `;
+        }
+    </script>
+</body>
+</html>
