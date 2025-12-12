@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 13: Endocrine System (Gold)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; user-select: none; }
+        
+        .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* === INTERACTIVE ELEMENTS === */
+        .menu-card { 
+            transition: transform 0.2s; cursor: pointer; 
+            border: 1px solid #334155; 
+            background: #1e293b;
+        }
+        .menu-card:hover { transform: translateY(-4px); border-color: #a855f7; box-shadow: 0 4px 6px -1px rgba(168, 85, 247, 0.2); }
+        .menu-card:active { transform: scale(0.98); background-color: #020617; }
+
+        /* BUTTONS */
+        .btn-option { 
+            transition: all 0.1s; 
+            cursor: pointer; 
+            position: relative; 
+            border-bottom: 4px solid #334155; 
+            user-select: none;
+            z-index: 10;
+        }
+        .btn-option:active { 
+            transform: translateY(2px); 
+            border-bottom-width: 0px; 
+            margin-top: 2px; 
+        }
+        .btn-option.correct { background-color: #15803d !important; border-color: #14532d !important; color: white !important; opacity: 1 !important; }
+        .btn-option.wrong { background-color: #991b1b !important; border-color: #7f1d1d !important; opacity: 0.6; }
+        .btn-option.dimmed { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
+
+        /* BUILDER BLOCKS */
+        .word-block { transition: all 0.1s; cursor: pointer; border-bottom: 4px solid #047857; z-index: 10; }
+        .word-block:active { transform: translateY(2px); border-bottom-width: 0; margin-top: 2px; }
+        .word-block.used { opacity: 0.3; pointer-events: none; background-color: #020617; }
+
+        /* BUBBLES */
+        .bubble { transition: all 0.1s; cursor: pointer; border: 2px solid #475569; z-index: 10; }
+        .bubble:active { transform: scale(0.95); }
+        .bubble.selected { background-color: #7e22ce; border-color: #d8b4fe; color: white; }
+        .bubble.correct { background-color: #15803d !important; border-color: #22c55e !important; }
+        .bubble.wrong { background-color: #991b1b !important; border-color: #ef4444 !important; }
+
+        /* LOOP BLOCKS */
+        .loop-block { transition: all 0.1s; border-left: 4px solid #3b82f6; cursor: pointer; z-index: 10; }
+        .loop-block:hover { transform: translateX(4px); background-color: #1e3a8a; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+
+    <header class="w-full max-w-6xl flex justify-between items-center mb-6 p-4 bg-slate-900/95 rounded-2xl border border-slate-700 backdrop-blur-md sticky top-2 z-50 shadow-2xl">
+        <div class="flex items-center gap-4">
+            <div class="bg-purple-600 p-2 rounded-lg text-2xl shadow-lg">🧬</div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black text-white leading-none">Endocrine System</h1>
+                <p class="text-xs text-purple-400 font-bold uppercase tracking-widest mt-1">Chapter 13 • Master Rotation</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest">Time</p>
+                <p class="text-xl font-mono text-white" id="global-timer">00:00</p>
+            </div>
+            <button onclick="window.endSession()" class="bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-5 py-3 rounded-xl font-bold uppercase transition-all text-xs flex items-center gap-2 cursor-pointer hover:shadow-lg">
+                🛑 End Shift
+            </button>
+        </div>
+    </header>
+
+    <div id="hub-menu" class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 fade-in pb-12"></div>
+
+    <main id="game-container" class="hidden w-full max-w-4xl mt-2 fade-in">
+        <div class="bg-slate-800 border border-slate-700 rounded-t-3xl p-4 flex justify-between items-center bg-opacity-95 backdrop-blur">
+            <div class="flex items-center gap-3">
+                <button onclick="window.returnToHub()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-600 uppercase tracking-wide cursor-pointer">← Hub</button>
+                <span id="mode-title" class="font-bold text-slate-200 uppercase tracking-widest text-sm border-l border-slate-600 pl-3 ml-2">Activity</span>
+            </div>
+            <div class="text-right">
+                <div class="text-[10px] font-bold text-slate-500 uppercase">Progress</div>
+                <div class="text-lg font-black text-white leading-none" id="session-progress">0/25</div>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/90 border-x border-b border-slate-700 rounded-b-3xl p-8 shadow-2xl relative min-h-[600px] flex flex-col justify-between">
+            <div id="game-content" class="flex-grow fade-in w-full flex flex-col justify-center relative z-10"></div>
+            <div id="feedback-area" class="mt-8 pt-4 border-t border-slate-700 min-h-[60px] flex items-center justify-center text-sm font-bold text-slate-500 text-center relative z-0">
+                Select an answer to continue...
+            </div>
+        </div>
+    </main>
+
+    <div id="results-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 backdrop-blur-sm p-4 fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-2xl w-full shadow-2xl relative overflow-y-auto max-h-[90vh]">
+            <div class="text-center mb-8">
+                <div class="text-6xl mb-4">📋</div>
+                <h2 class="text-3xl font-black text-white mb-1">Shift Report</h2>
+                <p class="text-slate-400 text-sm">Performance Summary</p>
+            </div>
+            <div id="results-breakdown" class="grid gap-3 mb-8"></div>
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                    <p class="text-xs text-slate-500 uppercase tracking-widest">Questions Done</p>
+                    <p class="text-3xl font-black text-white" id="total-q">0</p>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                    <p class="text-xs text-slate-500 uppercase tracking-widest">Accuracy</p>
+                    <p class="text-3xl font-black text-emerald-400" id="total-acc">0%</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="window.closeResults()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all cursor-pointer">Resume Shift</button>
+                <button onclick="location.reload()" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all cursor-pointer">New Session</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === DATABASES ===
+        const dbConcepts = [
+            { center: "Anterior Pituitary", matches: ["ACTH", "Growth Hormone", "FSH", "LH", "Prolactin", "TSH"] },
+            { center: "Posterior Pituitary", matches: ["ADH (Antidiuretic)", "Oxytocin", "Stored Hormones", "Hypothalamus Connection"] },
+            { center: "Thyroid Gland", matches: ["T3", "T4", "Calcitonin", "Metabolism", "Butterfly Shape"] },
+            { center: "Adrenal Cortex", matches: ["Cortisol", "Aldosterone", "Androgens", "Anti-inflammatory"] },
+            { center: "Adrenal Medulla", matches: ["Epinephrine", "Norepinephrine", "Fight or Flight", "Sympathetic"] },
+            { center: "Pancreas", matches: ["Insulin", "Glucagon", "Islets of Langerhans", "Blood Sugar"] },
+            { center: "Parathyroid", matches: ["PTH", "Raises Calcium", "Posterior Thyroid", "Bone Breakdown"] },
+            { center: "Pineal Gland", matches: ["Melatonin", "Circadian Rhythm", "Sleep-Wake Cycle"] },
+            { center: "Thymus", matches: ["Thymosin", "Immune System", "T-Cell Maturation"] }
+        ];
+
+        const dbHormones = [
+            { h: "ACTH", g: "Anterior Pituitary" }, { h: "FSH", g: "Anterior Pituitary" }, 
+            { h: "Growth Hormone", g: "Anterior Pituitary" }, { h: "Lactogenic Hormone", g: "Anterior Pituitary" },
+            { h: "LH", g: "Anterior Pituitary" }, { h: "TSH", g: "Anterior Pituitary" },
+            { h: "ADH", g: "Posterior Pituitary" }, { h: "Oxytocin", g: "Posterior Pituitary" },
+            { h: "Melatonin", g: "Pineal Gland" }, { h: "Calcitonin", g: "Thyroid Gland" }, 
+            { h: "T3/T4", g: "Thyroid Gland" }, { h: "PTH", g: "Parathyroid" }, 
+            { h: "Thymosin", g: "Thymus" }, { h: "Insulin", g: "Pancreas" }, 
+            { h: "Glucagon", g: "Pancreas" }, { h: "Cortisol", g: "Adrenal Cortex" }, 
+            { h: "Aldosterone", g: "Adrenal Cortex" }, { h: "Epinephrine", g: "Adrenal Medulla" },
+            { h: "Estrogen", g: "Ovaries" }, { h: "Testosterone", g: "Testicles" }
+        ];
+
+        const dbCases = [
+            { 
+                title: "ER Case: Cushing's Syndrome",
+                story: "A 45-year-old female presents with central obesity, a rounded 'moon face', and a fat pad on her upper back ('buffalo hump'). She reports bruising easily and feeling weak.",
+                steps: [
+                    { prompt: "Most likely diagnosis?", options: ["Cushing's Syndrome", "Addison's Disease", "Graves' Disease"], ans: "Cushing's Syndrome" },
+                    { prompt: "Caused by excess:", options: ["Cortisol", "Thyroxine", "Insulin"], ans: "Cortisol" },
+                    { prompt: "Cortisol source:", options: ["Adrenal Cortex", "Adrenal Medulla", "Anterior Pituitary"], ans: "Adrenal Cortex" }
+                ]
+            },
+            {
+                title: "Pediatric Case: Excessive Thirst",
+                story: "A 6-year-old boy is constantly drinking water (polydipsia) and urinating frequently (polyuria). Urine is very dilute. Blood glucose is normal.",
+                steps: [
+                    { prompt: "Diagnosis?", options: ["Diabetes Insipidus", "Diabetes Mellitus", "Kidney Stones"], ans: "Diabetes Insipidus" },
+                    { prompt: "Hormone Insufficiency:", options: ["ADH", "Insulin", "Aldosterone"], ans: "ADH" },
+                    { prompt: "ADH Function:", options: ["Water reabsorption", "Glucose absorption", "Calcium balance"], ans: "Water reabsorption" }
+                ]
+            },
+            {
+                title: "Clinic Case: Graves' Disease",
+                story: "30yo female complains of anxiety, rapid heartbeat, and weight loss. Physical exam reveals Exophthalmos (bulging eyes) and a goiter.",
+                steps: [
+                    { prompt: "Diagnosis?", options: ["Graves' Disease", "Hashimoto's", "Addison's"], ans: "Graves' Disease" },
+                    { prompt: "This is an autoimmune:", options: ["Hyperthyroidism", "Hypothyroidism", "Hypoparathyroidism"], ans: "Hyperthyroidism" },
+                    { prompt: "Treatment:", options: ["Radioactive Iodine", "Insulin", "Cortisone"], ans: "Radioactive Iodine" }
+                ]
+            },
+            {
+                title: "ER Case: Tetany",
+                story: "Post-thyroidectomy patient arrives with painful muscle cramps and spasms (Tetany).",
+                steps: [
+                    { prompt: "Indication of:", options: ["Hypocalcemia", "Hyperglycemia", "Hyponatremia"], ans: "Hypocalcemia" },
+                    { prompt: "Damaged Glands:", options: ["Parathyroid", "Adrenal", "Salivary"], ans: "Parathyroid" },
+                    { prompt: "Calcium Raising Hormone:", options: ["PTH", "Calcitonin", "T4"], ans: "PTH" }
+                ]
+            },
+            {
+                title: "Case: Acromegaly",
+                story: "40yo man. Hands/feet enlarging. Jaw prominent. Deep voice. Occurring in adulthood.",
+                steps: [
+                    { prompt: "Diagnosis?", options: ["Acromegaly", "Gigantism", "Dwarfism"], ans: "Acromegaly" },
+                    { prompt: "Caused by excess:", options: ["Growth Hormone", "Thyroxine", "Testosterone"], ans: "Growth Hormone" },
+                    { prompt: "Surgical removal:", options: ["Hypophysectomy", "Thyroidectomy", "Adrenalectomy"], ans: "Hypophysectomy" }
+                ]
+            },
+            {
+                title: "Case: Gigantism",
+                story: "12yo boy grew 8 inches in 1 year. Joint pain. Parents are average height.",
+                steps: [
+                    { prompt: "Diagnosis?", options: ["Gigantism", "Acromegaly", "Marfan's"], ans: "Gigantism" },
+                    { prompt: "Occurs before closure of:", options: ["Epiphyseal Plates", "Cranial Sutures", "Fontanelles"], ans: "Epiphyseal Plates" },
+                    { prompt: "Hormone Target:", options: ["Bones/Muscles", "Kidneys", "Liver"], ans: "Bones/Muscles" }
+                ]
+            },
+            {
+                title: "Case: Addison's",
+                story: "Fatigue, weight loss, low BP, 'bronzing' of skin.",
+                steps: [
+                    { prompt: "Diagnosis?", options: ["Addison's Disease", "Cushing's", "Graves'"], ans: "Addison's Disease" },
+                    { prompt: "Organ Failure:", options: ["Adrenal Cortex", "Adrenal Medulla", "Pancreas"], ans: "Adrenal Cortex" },
+                    { prompt: "Treatment:", options: ["Cortisone replacement", "Insulin injection", "Thyroidectomy"], ans: "Cortisone replacement" }
+                ]
+            },
+            {
+                title: "Case: Diabetes T1",
+                story: "10yo child. Weight loss, polyphagia, polydipsia, polyuria. Fruity breath.",
+                steps: [
+                    { prompt: "Diagnosis?", options: ["Type 1 Diabetes", "Type 2 Diabetes", "Diabetes Insipidus"], ans: "Type 1 Diabetes" },
+                    { prompt: "Pathology:", options: ["Beta cell destruction", "Insulin resistance", "ADH failure"], ans: "Beta cell destruction" },
+                    { prompt: "Fruity Breath Cause:", options: ["Ketoacidosis", "Hypoglycemia", "Dehydration"], ans: "Ketoacidosis" }
+                ]
+            },
+            {
+                title: "Case: Pheochromocytoma",
+                story: "Racing heart, panic attacks, sweating, high BP.",
+                steps: [
+                    { prompt: "Tumor Location:", options: ["Adrenal Medulla", "Adrenal Cortex", "Pituitary"], ans: "Adrenal Medulla" },
+                    { prompt: "Excess Hormone:", options: ["Epinephrine", "Cortisol", "Aldosterone"], ans: "Epinephrine" },
+                    { prompt: "Treatment:", options: ["Adrenalectomy", "Thyroidectomy", "Insulin"], ans: "Adrenalectomy" }
+                ]
+            },
+            {
+                title: "Case: Hashimoto's",
+                story: "Chronic fatigue, weight gain, cold intolerance, dry skin. Goiter.",
+                steps: [
+                    { prompt: "Condition:", options: ["Hypothyroidism", "Hyperthyroidism", "Diabetes"], ans: "Hypothyroidism" },
+                    { prompt: "Specific Cause:", options: ["Hashimoto's Disease", "Graves' Disease", "Cushing's"], ans: "Hashimoto's Disease" },
+                    { prompt: "Elevated Feedback Hormone:", options: ["TSH", "T3", "T4"], ans: "TSH" }
+                ]
+            }
+        ];
+
+        const dbTreatments = [
+            { proc: "Hypophysectomy", organ: "Pituitary Gland" },
+            { proc: "Pinealectomy", organ: "Pineal Gland" },
+            { proc: "Thyroidectomy", organ: "Thyroid Gland" },
+            { proc: "Radioactive Iodine", organ: "Thyroid Gland" },
+            { proc: "Parathyroidectomy", organ: "Parathyroid Gland" },
+            { proc: "Thymectomy", organ: "Thymus" },
+            { proc: "Pancreatectomy", organ: "Pancreas" },
+            { proc: "Adrenalectomy", organ: "Adrenal Gland" },
+            { proc: "Cortisone Administration", organ: "Adrenal (Synthetic)" }
+        ];
+
+        const dbBuilder = [
+            { def: "Excessive Thirst", parts: ["Poly", "dipsia"], pool: ["Poly", "dipsia", "ur", "ia", "Hyper", "Hypo"] },
+            { def: "Excessive Urination", parts: ["Poly", "uria"], pool: ["Poly", "uria", "dipsia", "Endo", "crine"] },
+            { def: "High Blood Sugar", parts: ["Hyper", "glyc", "emia"], pool: ["Hyper", "glyc", "emia", "Hypo", "ur"] },
+            { def: "Enlargement of Extremities", parts: ["Acr", "o", "megaly"], pool: ["Acr", "o", "megaly", "Adren", "path"] },
+            { def: "Enlargement of Adrenal Glands", parts: ["Adren", "o", "megaly"], pool: ["Adren", "o", "megaly", "Thyr", "oid"] },
+            { def: "Inflammation of Pancreas", parts: ["Pancreat", "itis"], pool: ["Pancreat", "itis", "osis", "ectomy", "Pineal"] },
+            { def: "Surgical Removal of Thyroid", parts: ["Thyroid", "ectomy"], pool: ["Thyroid", "ectomy", "otomy", "plasty", "Para"] },
+            { def: "To Secrete Within", parts: ["Endo", "crine"], pool: ["Endo", "crine", "Exo", "logy", "ist"] }
+        ];
+
+        const dbLoops = [
+            { name: "Blood Sugar Regulation", steps: ["High Glucose", "Pancreas", "Insulin", "Cells absorb Sugar"] },
+            { name: "Stress Response", steps: ["Stress", "Hypothalamus", "Pituitary", "Adrenal Cortex"] },
+            { name: "Calcium Regulation", steps: ["Low Calcium", "Parathyroid", "PTH", "Bone Breakdown"] },
+            { name: "Growth Pathway", steps: ["Hypothalamus", "Anterior Pituitary", "Growth Hormone", "Bone Growth"] },
+            { name: "Thyroid Feedback", steps: ["Hypothalamus", "Anterior Pituitary", "Thyroid Gland", "T3/T4 Release"] }
+        ];
+
+        // === USER STATE ===
+        let userState = {
+            concepts: { done: 0, correct: 0, total: 25, pool: [] },
+            sorting: { done: 0, correct: 0, total: 25, pool: [] },
+            clinical: { done: 0, correct: 0, total: 30, pool: [] },
+            builder: { done: 0, correct: 0, total: 25, pool: [] },
+            feedback: { done: 0, correct: 0, total: 25, pool: [] },
+            treatment: { done: 0, correct: 0, total: 25, pool: [] }
+        };
+
+        let currentMode = "";
+        let currentQuestion = null; 
+        let currentOptions = []; 
+        let isLocked = false;
+        let startTime = Date.now();
+        let loopSelection = [];
+        let conceptSelection = [];
+        let builderSelection = [];
+        
+        let activeCase = null;
+        let activeCaseStep = 0;
+        let activeCaseIndex = 0;
+
+        function init() {
+            renderHub();
+            userState.concepts.pool = [...dbConcepts];
+            userState.sorting.pool = [...dbHormones];
+            userState.builder.pool = [...dbBuilder];
+            userState.feedback.pool = [...dbLoops];
+            userState.treatment.pool = [...dbTreatments];
+
+            setInterval(() => {
+                const d = Math.floor((Date.now() - startTime)/1000);
+                const m = Math.floor(d/60).toString().padStart(2,'0');
+                const s = (d%60).toString().padStart(2,'0');
+                document.getElementById('global-timer').innerText = `${m}:${s}`;
+            }, 1000);
+        }
+
+        function renderHub() {
+            const menu = document.getElementById('hub-menu');
+            menu.innerHTML = '';
+            
+            const cats = [
+                {id: 'concepts', icon: '🧠', title: 'Concept Map', desc: 'Link Associations', color: 'purple'},
+                {id: 'sorting', icon: '🧪', title: 'Hormone Sort', desc: 'Classify Secretions', color: 'yellow'},
+                {id: 'clinical', icon: '🚑', title: 'Clinical Rounds', desc: '10 Cases (30 Qs)', color: 'blue'},
+                {id: 'builder', icon: '🧩', title: 'Term Builder', desc: 'Construct Medical Terms', color: 'emerald'},
+                {id: 'feedback', icon: '🔄', title: 'Feedback Loops', desc: 'Sequence Logic', color: 'pink'},
+                {id: 'treatment', icon: '🏥', title: 'Treatment Center', desc: 'Procedures', color: 'red'}
+            ];
+
+            cats.forEach(c => {
+                const s = userState[c.id];
+                const pct = (s.done / s.total) * 100;
+                menu.innerHTML += `
+                    <div onclick="window.startMode('${c.id}')" class="menu-card bg-slate-800 p-6 rounded-2xl border border-slate-700 text-left group relative overflow-hidden h-56 flex flex-col justify-between shadow-xl">
+                        <div class="absolute top-4 right-4 text-6xl opacity-20 grayscale group-hover:grayscale-0 transition-all">${c.icon}</div>
+                        <div class="relative z-10">
+                            <h3 class="text-${c.color}-400 font-bold text-xs uppercase tracking-widest mb-1">${c.title}</h3>
+                            <p class="text-slate-400 text-sm">${c.desc}</p>
+                        </div>
+                        <div class="relative z-10 w-full">
+                            <div class="flex justify-between text-xs text-slate-400 mb-1">
+                                <span>Progress</span>
+                                <span>${s.done}/${s.total}</span>
+                            </div>
+                            <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                                <div class="bg-${c.color}-500 h-full transition-all duration-500" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        window.startMode = function(mode) {
+            currentMode = mode;
+            document.getElementById('hub-menu').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('mode-title').innerText = mode.toUpperCase().replace('_',' ');
+            generateQuestion();
+            updateHeader();
+        }
+
+        window.returnToHub = function() {
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('hub-menu').classList.remove('hidden');
+            renderHub();
+        }
+
+        function updateHeader() {
+            const s = userState[currentMode];
+            document.getElementById('session-progress').innerText = `${s.done}/${s.total}`;
+        }
+
+        function getNextItem(mode) {
+            let pool = userState[mode].pool;
+            if(pool.length === 0) {
+                if(mode === 'concepts') pool = [...dbConcepts];
+                if(mode === 'sorting') pool = [...dbHormones];
+                if(mode === 'builder') pool = [...dbBuilder];
+                if(mode === 'feedback') pool = [...dbLoops];
+                if(mode === 'treatment') pool = [...dbTreatments];
+                userState[mode].pool = pool; 
+            }
+            const idx = Math.floor(Math.random() * pool.length);
+            if(mode === 'clinical') return pool[idx];
+            return pool.splice(idx, 1)[0];
+        }
+
+        function generateQuestion() {
+            isLocked = false;
+            document.getElementById('feedback-area').innerText = "Select an answer...";
+            document.getElementById('feedback-area').className = "mt-8 pt-4 border-t border-slate-700 min-h-[60px] flex items-center justify-center text-sm font-bold text-slate-500 text-center";
+
+            if (currentMode === 'concepts') genConceptMap();
+            else if (currentMode === 'sorting') genSorting();
+            else if (currentMode === 'clinical') genClinical();
+            else if (currentMode === 'builder') genBuilder();
+            else if (currentMode === 'feedback') genFeedback();
+            else if (currentMode === 'treatment') genTreatment();
+        }
+
+        // --- GENERATORS ---
+
+        function genClinical() {
+            if(!activeCase) {
+                // Fixed Sequence for Stability
+                if(activeCaseIndex >= dbCases.length) activeCaseIndex = 0;
+                activeCase = dbCases[activeCaseIndex];
+                activeCaseStep = 0;
+            }
+            const step = activeCase.steps[activeCaseStep];
+            const prompt = `
+                <div class="mb-6 text-left border-l-4 border-blue-500 pl-4 py-4 bg-blue-900/10 rounded-r-lg max-h-48 overflow-y-auto custom-scrollbar shadow-inner">
+                    <span class="text-blue-400 text-xs uppercase tracking-widest block mb-2 font-bold">Patient History</span>
+                    <p class="text-slate-200 text-base leading-relaxed italic">"${activeCase.story}"</p>
+                </div>
+                <div class="mt-6">
+                    <span class="text-white font-black block mb-3 text-xs uppercase bg-slate-800 inline-block px-3 py-1 rounded">Question ${activeCaseStep+1}/3</span>
+                    <p class="text-xl font-bold text-white leading-snug">${step.prompt}</p>
+                </div>
+            `;
+            const opts = [...step.options].sort(() => Math.random() - 0.5);
+            currentQuestion = { answer: step.ans, isCase: true }; 
+            currentOptions = opts;
+            renderChoice(prompt, opts);
+        }
+
+        function genConceptMap() {
+            const item = getNextItem('concepts');
+            conceptSelection = [];
+            const correct = [...item.matches].sort(() => Math.random() - 0.5).slice(0, 3);
+            let dist = [];
+            dbConcepts.forEach(c => { if(c.center !== item.center) dist.push(...c.matches); });
+            const wrong = dist.sort(() => Math.random() - 0.5).slice(0, 3);
+            const options = [...correct, ...wrong].sort(() => Math.random() - 0.5);
+            currentQuestion = { correct: correct, center: item.center };
+            currentOptions = options;
+
+            const c = document.getElementById('game-content');
+            c.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center text-center">
+                    <p class="text-purple-400 font-bold uppercase text-xs mb-4 tracking-widest">Select 3 associated terms</p>
+                    <div class="bg-purple-600 text-white font-black text-2xl p-6 rounded-2xl shadow-lg mb-8 w-full max-w-sm">
+                        ${item.center}
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 w-full">
+                        ${options.map((opt, i) => `<button onclick="window.toggleConcept(${i}, this)" class="bubble bg-slate-800 border-2 border-slate-600 text-slate-300 font-bold p-3 rounded-xl text-sm min-h-[80px] hover:border-purple-400">${opt}</button>`).join('')}
+                    </div>
+                    <button onclick="window.checkConcept()" class="mt-8 bg-slate-700 hover:bg-purple-600 text-white font-bold py-3 px-12 rounded-xl transition-all shadow-lg border border-slate-500 uppercase tracking-widest">Submit Group</button>
+                </div>
+            `;
+        }
+
+        window.toggleConcept = function(index, btn) {
+            if(isLocked) return;
+            const val = currentOptions[index];
+            if(conceptSelection.includes(val)) {
+                conceptSelection = conceptSelection.filter(i => i !== val);
+                btn.classList.remove('selected');
+            } else {
+                if(conceptSelection.length < 3) {
+                    conceptSelection.push(val);
+                    btn.classList.add('selected');
+                }
+            }
+        }
+
+        window.checkConcept = function() {
+            if(conceptSelection.length !== 3) {
+                document.getElementById('feedback-area').innerText = "Please select exactly 3 items.";
+                return;
+            }
+            const correctSet = new Set(currentQuestion.correct);
+            let score = 0;
+            document.querySelectorAll('.bubble').forEach(btn => {
+                const txt = btn.innerText;
+                if(correctSet.has(txt)) btn.classList.add('correct');
+                else if(conceptSelection.includes(txt)) btn.classList.add('wrong');
+            });
+            conceptSelection.forEach(sel => { if(correctSet.has(sel)) score++; });
+            if(score === 3) feedback(true, "Excellent! All correct.");
+            else feedback(false, "Incorrect. Review highlighted items.");
+        }
+
+        function genSorting() {
+            const item = getNextItem('sorting');
+            const type = Math.random() > 0.5 ? 'HG' : 'GH';
+            let prompt, answer;
+            if (type === 'HG') {
+                prompt = `Which gland secretes <strong>${item.h}</strong>?`;
+                answer = item.g;
+            } else {
+                prompt = `The <strong>${item.g}</strong> secretes:`;
+                answer = item.h;
+            }
+            let dist = [];
+            if(type === 'HG') dist = [...new Set(dbHormones.map(x=>x.g))].filter(x=>x!==answer);
+            else dist = dbHormones.filter(x=>x.g !== item.g).map(x=>x.h);
+            const opts = [answer, ...dist.sort(()=>Math.random()-0.5).slice(0,3)].sort(()=>Math.random()-0.5);
+            currentQuestion = { answer: answer };
+            currentOptions = opts;
+            renderChoice(prompt, opts);
+        }
+
+        function genBuilder() {
+            const item = getNextItem('builder');
+            currentQuestion = { answer: item.parts.join('') };
+            builderSelection = [];
+            const parts = item.pool.sort(()=>Math.random()-0.5);
+
+            const c = document.getElementById('game-content');
+            c.innerHTML = `
+                <div class="h-full flex flex-col justify-center text-center">
+                    <h2 class="text-xs font-bold text-emerald-300 mb-2 uppercase tracking-wide">Build Term</h2>
+                    <h3 class="text-2xl font-black text-white mb-8">"${item.def}"</h3>
+                    <div id="builder-stage" class="flex flex-wrap gap-2 justify-center mb-8 min-h-[60px] items-center p-4 bg-slate-800 rounded-2xl border-2 border-dashed border-slate-600"></div>
+                    <div class="flex flex-wrap gap-3 justify-center">
+                        ${parts.map(p => `<button onclick="window.addToBuilder('${p}', this)" class="bg-slate-700 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg border border-slate-600 text-base font-bold shadow-md word-block">${p}</button>`).join('')}
+                    </div>
+                    <button onclick="window.checkBuilder()" class="mt-8 bg-emerald-600 hover:bg-emerald-500 text-white py-4 px-12 rounded-xl font-black shadow-lg uppercase tracking-widest">Verify</button>
+                </div>
+            `;
+        }
+
+        function genFeedback() {
+            const item = getNextItem('feedback');
+            currentQuestion = { answer: JSON.stringify(item.steps) };
+            loopSelection = [];
+            const shuffled = [...item.steps].sort(() => Math.random() - 0.5);
+            document.getElementById('game-content').innerHTML = `
+                <div class="h-full flex flex-col">
+                    <h2 class="text-xs font-bold text-pink-400 mb-2 uppercase tracking-wide">Build Sequence:</h2>
+                    <h3 class="text-2xl font-black text-white mb-6">${item.name}</h3>
+                    <div id="seq-display" class="flex flex-wrap gap-3 mb-6 min-h-[80px] items-center p-4 bg-slate-900 rounded-xl border-2 border-dashed border-slate-700 justify-start content-start"></div>
+                    <div class="grid grid-cols-1 gap-3">
+                        ${shuffled.map(step => `<button onclick="window.addToLoop('${step.replace(/'/g, "\\'")}', this)" class="bg-slate-700 hover:bg-pink-600 text-white p-4 rounded-lg border border-slate-600 text-left font-bold shadow-md text-sm loop-block">${step}</button>`).join('')}
+                    </div>
+                    <button onclick="window.checkLoop()" class="mt-auto bg-pink-600 hover:bg-pink-500 text-white py-4 rounded-xl font-black shadow-lg uppercase tracking-widest">Verify Sequence</button>
+                </div>
+            `;
+        }
+
+        function genTreatment() {
+            const item = getNextItem('treatment');
+            const type = Math.random() > 0.5 ? 'Target' : 'Procedure';
+            let prompt, answer;
+            if (type === 'Target') {
+                prompt = `Target organ for <span class="text-red-400 font-bold">${item.proc}</span>?`;
+                answer = item.organ;
+            } else {
+                prompt = `Procedure involving the <span class="text-red-400 font-bold">${item.organ}</span>?`;
+                answer = item.proc;
+            }
+            let dist = [];
+            if(type === 'Target') dist = [...new Set(dbTreatments.map(x=>x.organ))].filter(x=>x!==answer);
+            else dist = dbTreatments.filter(x=>x.name!==item.proc).map(x=>x.proc);
+            const opts = [answer, ...dist.sort(()=>Math.random()-0.5).slice(0,3)].sort(()=>Math.random()-0.5);
+            currentQuestion = { answer: answer };
+            currentOptions = opts;
+            renderChoice(prompt, opts);
+        }
+
+        // --- UTILS ---
+        function renderChoice(promptHtml, options) {
+            document.getElementById('game-content').innerHTML = `
+                <div class="flex flex-col h-full justify-center">
+                    <h2 class="text-xl md:text-2xl font-bold text-white mb-8 text-center">${promptHtml}</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${options.map((o, i) => `<button onclick="window.handleChoice(${i})" class="bg-slate-700 hover:bg-purple-600 p-5 rounded-xl border border-slate-600 text-white font-bold transition-all shadow-md text-left btn-option flex items-center h-full">${o}</button>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.handleChoice = function(index) {
+            if(isLocked) return;
+            const btns = document.querySelectorAll('.btn-option');
+            const selected = currentOptions[index];
+            const correct = currentQuestion.answer;
+            let correctIndex = -1;
+            currentOptions.forEach((o, i) => { if(o === correct) correctIndex = i; });
+
+            if(selected === correct) {
+                btns[index].classList.add('correct');
+                feedback(true, "Correct!");
+            } else {
+                btns[index].classList.add('wrong');
+                if(correctIndex !== -1) btns[correctIndex].classList.add('correct');
+                feedback(false, `Incorrect. Correct answer: ${currentQuestion.answer}`);
+            }
+            btns.forEach((b, i) => { if(i !== index && i !== correctIndex) b.classList.add('dimmed'); });
+        }
+
+        window.addToBuilder = function(part, btn) {
+            builderSelection.push(part);
+            btn.classList.add('used');
+            document.getElementById('builder-stage').innerHTML += `<span class="bg-emerald-900 text-white px-3 py-1 rounded-lg border border-emerald-500 font-bold ml-1">${part}</span>`;
+        }
+
+        window.checkBuilder = function() {
+            if(builderSelection.join('') === currentQuestion.answer) feedback(true, "Correct Term!");
+            else feedback(false, "Incorrect.");
+        }
+
+        window.addToLoop = function(step, btn) {
+            loopSelection.push(step);
+            btn.classList.add('opacity-30', 'pointer-events-none');
+            const arrow = loopSelection.length > 1 ? ' → ' : '';
+            document.getElementById('seq-display').innerHTML += `${arrow}<span class="bg-pink-900 text-white px-3 py-1 rounded-lg text-xs font-bold border border-pink-500">${step}</span>`;
+        }
+
+        window.checkLoop = function() {
+            if(JSON.stringify(loopSelection) === currentQuestion.answer) feedback(true, "Verified!");
+            else feedback(false, "Incorrect Sequence.");
+        }
+
+        function feedback(success, msg) {
+            isLocked = true;
+            const area = document.getElementById('feedback-area');
+            area.innerText = msg;
+            area.className = `mt-8 pt-6 border-t border-slate-700 min-h-[80px] flex items-center justify-center text-xl font-black text-center bg-slate-900/50 rounded-xl fade-in ${success ? 'text-green-400' : 'text-red-400'}`;
+            
+            userState[currentMode].done++;
+            if(success) userState[currentMode].correct++;
+            updateHeader();
+
+            setTimeout(() => {
+                if(currentQuestion.isCase) {
+                    activeCaseStep++; // Advance even if wrong to keep flow
+                    if(activeCaseStep >= 3) {
+                        activeCase = null; // Case Done
+                        activeCaseIndex++;
+                    }
+                }
+                generateQuestion();
+            }, 3000); // 3 second pause to read answer
+        }
+
+        window.endSession = function() {
+            document.getElementById('results-modal').classList.remove('hidden');
+            const bd = document.getElementById('results-breakdown');
+            bd.innerHTML = '';
+            let tD = 0, tC = 0;
+            ['concepts','sorting','clinical','builder','feedback','treatment'].forEach(id => {
+                const s = userState[id]; tD += s.done; tC += s.correct;
+                bd.innerHTML += `
+                    <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <span class="text-slate-300 uppercase font-bold text-xs tracking-wider">${id}</span>
+                        <span class="text-white font-mono font-bold text-xs">${s.done}/${s.total}</span>
+                    </div>`;
+            });
+            document.getElementById('total-q').innerText = tD;
+            document.getElementById('total-acc').innerText = tD > 0 ? Math.round((tC/tD)*100)+"%" : "0%";
+        }
+
+        window.closeResults = function() {
+            document.getElementById('results-modal').classList.add('hidden');
+            returnToHub();
+        }
+
+        init();
+    </script>
+</body>
+</html>
